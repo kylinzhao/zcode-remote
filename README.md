@@ -1,7 +1,10 @@
-# ZCode Remote — Android 客户端
+# ZCode Remote — Android & iOS 客户端
 
-一个可直接安装的 Android 客户端：内嵌 WebView 打开电脑端 ZCode 的「远程访问」页面，
+一个可直接安装的移动客户端：内嵌 WebView 打开电脑端 ZCode 的「远程访问」页面，
 并支持管理多个实例 —— 家里电脑、公司电脑各一个，一键切换。
+
+- **Android**：见下文「安装」「从源码构建」，APK 在 Release 页直接下载；
+- **iOS / iPadOS**：见文末「iOS 版」，应用内扫码 + 多实例，iPad 以桌面形态（PC 形式）加载。
 
 **工作原理**：ZCode 桌面端（v3.14+）内置「远程访问」，会生成一个经 `zcode.z.ai` 云中继的
 扫码网址（`https://zcode.z.ai/remote/v4?sid=…&hash=…&mid=…&name=…`）。手机打开该网址
@@ -92,3 +95,29 @@ app/src/main/java/dev/zcode/remote/
   Instances.kt             实例模型与本地存储、URL 清洗
 wayfinder/                 决策地图（技术选型与验证记录）
 ```
+
+## iOS 版（iPhone / iPad）
+
+SwiftUI 原生实现，功能与 Android 版对齐：
+
+- **应用内扫码绑定**：点「＋」用系统数据扫描器（VisionKit DataScanner）扫电脑端二维码，
+  自动按电脑名保存实例并打开；粘贴兜底始终可用；
+- **多实例管理**：列表按最近打开排序，长按编辑/复制/删除，按链接去重；
+- **iPad 桌面形态**：iPad 默认以 **PC 形式**加载远程页（macOS Safari UA + desktop content
+  mode，页面自动呈现桌面布局），并支持多窗口并排访问两台电脑；
+  该能力同时做成每实例开关（"以桌面版网页加载"），iPhone 需要时也可打开；
+- **安全**：仅 https；WKWebView 不提供证书绕过；实例数据存 App 沙盒 JSON；
+  屏幕常亮开关；断连中文错误页 + 重试。
+
+### 构建（需要一台装有 Xcode 的 Mac）
+
+```bash
+brew install xcodegen
+cd ios && xcodegen
+open ZCodeRemote.xcodeproj
+# 在 Signing & Capabilities 里选择你的 Apple ID Team（免费个人账号即可）
+# 连接 iPhone/iPad，选中设备后 Run
+```
+
+免费签名 7 天有效，到期重跑一次；持续使用建议加入 99 美元/年的开发者计划。
+仓库 CI（`ios-build` workflow）会在每次 iOS 代码变更时自动构建并生成模拟器截图（Artifacts）。

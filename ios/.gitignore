@@ -1,0 +1,7 @@
+# iOS 工程产物与本地文件
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+.DS_Store

@@ -24,6 +24,7 @@
 - [T7 交付物清单](tickets/T7-deliverables.md) — APK + 签名 keystore + README（两台电脑接入指南）+ 本地图
 - [T8 本机 AGP 资源管线故障与绕行](tickets/T8-build-environment-fog.md) — AAR 库资源在本机链接期确定性丢失；改为零 AndroidX 依赖的纯平台 UI 实现，构建成功
 - [T9 App 内扫码绑定](tickets/T9-in-app-scanning.md) — 主入口改为应用内扫码（zxing core JAR + camera2 自研壳），扫完自动存实例并打开；粘贴兜底
+- [T10 iOS 版](tickets/T10-ios-version.md) — SwiftUI + WKWebView + DataScanner；iPad 桌面形态为每实例开关（desktop UA + preferredContentMode）；无 Xcode，CI(macos-15) 构建验证
 
 ## Not yet specified
 
