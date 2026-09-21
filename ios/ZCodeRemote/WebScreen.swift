@@ -16,7 +16,7 @@ struct WebScreen: View {
     var body: some View {
         Group {
             if let instance {
-                WebViewContainer(instance: instance)
+                WebViewContainer(instance: instance, confirmingDelete: $confirmingDelete)
                     .navigationTitle(instance.name)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(.visible, for: .navigationBar)
@@ -45,6 +45,7 @@ struct WebScreen: View {
 /// 承载 WebView 与工具条（刷新/复制/删除等）。
 private struct WebViewContainer: View {
     let instance: Instance
+    @Binding var confirmingDelete: Bool
     @ObservedObject private var store = InstanceStore.shared
 
     @State private var progress: Double = 0
@@ -163,10 +164,10 @@ private struct WebView: UIViewRepresentable {
         let desktop = instance.desktopMode
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.preferredContentMode = desktop ? .desktop : .mobile
-        if desktop {
-            config.customUserAgent = Urls.desktopUserAgent
-        }
         let view = WKWebView(frame: .zero, configuration: config)
+        if desktop {
+            view.customUserAgent = Urls.desktopUserAgent
+        }
         view.allowsBackForwardNavigationGestures = true
         view.navigationDelegate = context.coordinator
         context.coordinator.progressObservation = view.observe(\.estimatedProgress, options: [.new]) { obj, _ in

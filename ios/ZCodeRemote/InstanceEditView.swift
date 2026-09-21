@@ -21,7 +21,7 @@ struct InstanceEditView: View {
         _urlText = State(initialValue: suggestedURL ?? existing?.url ?? "")
         _name = State(initialValue: existing?.name ?? suggestedURL.flatMap(Urls.suggestName) ?? "")
         _keepScreenOn = State(initialValue: existing?.keepScreenOn ?? false)
-        _desktopMode = State(initialValue: existing?.desktopMode ?? UIDevice.current.userInterfaceIdiom == .pad)
+        _desktopMode = State(initialValue: existing?.desktopMode ?? (UIDevice.current.userInterfaceIdiom == .pad))
     }
 
     var body: some View {
