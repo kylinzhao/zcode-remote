@@ -124,3 +124,6 @@ open ZCodeRemote.xcodeproj
 
 > 已在 CI 实测：iPhone 以移动 UA 加载；iPad 以 macOS Safari UA（PC 形式）加载，
 > `httpbin.org/user-agent` 回显截图见最近一次 `ios-build` 运行的 Artifacts。
+
+> **行为提示**：只绑定了一个电脑时，打开 App 会直接进入该页面；页面右上角菜单第一项
+> 即「添加新实例」，添加后自动切换过去；左上返回随时回到实例列表。
