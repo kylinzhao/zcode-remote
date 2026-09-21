@@ -121,3 +121,6 @@ open ZCodeRemote.xcodeproj
 
 免费签名 7 天有效，到期重跑一次；持续使用建议加入 99 美元/年的开发者计划。
 仓库 CI（`ios-build` workflow）会在每次 iOS 代码变更时自动构建并生成模拟器截图（Artifacts）。
+
+> 已在 CI 实测：iPhone 以移动 UA 加载；iPad 以 macOS Safari UA（PC 形式）加载，
+> `httpbin.org/user-agent` 回显截图见最近一次 `ios-build` 运行的 Artifacts。

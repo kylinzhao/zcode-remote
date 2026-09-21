@@ -22,7 +22,16 @@ iPad 需支持 PC 形式的 web 访问。本机无 Xcode 如何交付与验证�
 4. **真机安装**：交付源码 + project.yml，用户装 Xcode 后 `brew install xcodegen && cd ios && xcodegen`
    打开工程选自己的 Team 即可免费签名安装（7 天有效期）。
 
-## 状态
+## 状态（closed 2026-09-21，CI 验证全过）
 
 - 代码：ios/（xcodegen 工程 + 7 个 Swift 文件）；CI：.github/workflows/ios-build.yml
-- 待 CI 跑绿（编译 + 双模拟器截图）
+- CI 5 轮迭代后绿（编译错误：@discardableResult 拼写、RecognizedItem 类型与
+  payloadStringValue 属性名、customUserAgent 归属 WKWebView、confirmingDelete 作用域、
+  ?? 优先级——均为无 Xcode 环境下静态自查的预期偏差）
+- 模拟器实测（artifact 截图）：
+  - iPhone：空列表渲染正常；WebView 加载 httpbin.org/user-agent 回显 **iPhone UA**
+    （移动形态正确）、导航栏双行标题正常；
+  - iPad：列表正常；WebView 回显 **macOS Safari UA（Version/17.4）** →
+    桌面形态（PC 形式）生效（截图 04_ipad_desktop_ua.png）；
+  - 首轮 iPad 黑屏为模拟器 boot 时机问题（分步截图后消失），非应用问题；
+  - 扫码（DataScanner）依赖真机相机，模拟器自动降级为粘贴，待真机人工验收。
