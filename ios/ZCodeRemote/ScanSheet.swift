@@ -156,7 +156,7 @@ private struct ScannerBox: UIViewControllerRepresentable {
             guard !fired else { return }
             for item in addedItems {
                 if case .barcode(let barcode) = item,
-                   let payload = barcode.payloadString?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   let payload = barcode.payloadStringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !payload.isEmpty {
                     fired = true
                     onPayload(payload)
