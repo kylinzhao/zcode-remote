@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZCode Remote</string>
+    <string name="intent_label">添加到 ZCode Remote</string>
+
+    <string name="empty_title">还没有实例</string>
+    <string name="empty_subtitle">在电脑端 ZCode 打开「远程访问」扫码，把网址发到手机后分享到这里；或直接粘贴添加</string>
+    <string name="btn_add">添加实例</string>
+    <string name="fab_add">添加实例</string>
+
+    <string name="menu_edit">编辑</string>
+    <string name="menu_delete">删除</string>
+    <string name="menu_copy">复制链接</string>
+    <string name="menu_browser">在浏览器打开</string>
+    <string name="menu_refresh">刷新</string>
+    <string name="menu_more">更多选项</string>
+    <string name="btn_back">返回</string>
+
+    <string name="scan_hint">对准电脑端 ZCode「远程访问」二维码</string>
+    <string name="scan_paste">手动粘贴链接</string>
+    <string name="scan_invalid">二维码里没有 ZCode 远程链接：%1$s</string>
+    <string name="scan_added">已保存，正在打开…</string>
+    <string name="scan_exists">实例已存在，正在打开…</string>
+    <string name="camera_tip">需要相机权限才能扫码；也可以手动粘贴链接</string>
+    <string name="camera_grant">授权相机</string>
+    <string name="torch_desc">手电筒</string>
+    <string name="scan_error">相机启动失败：%1$s</string>
+
+    <string name="title_add_instance">添加实例</string>
+    <string name="title_edit_instance">编辑实例</string>
+    <string name="field_name">实例名称</string>
+    <string name="field_name_hint">如：家里 MacBook / 公司台式机</string>
+    <string name="field_url">网址</string>
+    <string name="field_url_helper">粘贴电脑端 ZCode「远程访问」扫码得到的 https 网址</string>
+    <string name="switch_keep_screen_on">打开时保持屏幕常亮</string>
+    <string name="security_note">网址内含访问凭证，仅保存在本机应用私有目录，请勿外传。</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+
+    <string name="delete_confirm_title">删除实例</string>
+    <string name="delete_confirm_msg">确定删除「%1$s」吗？仅删除手机上的入口，不影响电脑端。</string>
+
+    <string name="copied">已复制链接</string>
+    <string name="invalid_url">网址无效：需要 https:// 开头的完整链接</string>
+    <string name="toast_not_supported">不支持打开此链接</string>
+    <string name="not_opened_yet">未打开过</string>
+    <string name="just_now">刚刚</string>
+    <string name="minutes_ago">%1$d 分钟前</string>
+    <string name="hours_ago">%1$d 小时前</string>
+    <string name="days_ago">%1$d 天前</string>
+
+    <string name="error_title">无法打开页面</string>
+    <string name="error_network">网络连接失败。请检查手机网络，并确认电脑端 ZCode 正在运行、远程访问已开启。</string>
+    <string name="error_ssl">证书校验失败，已阻止加载。</string>
+    <string name="error_http">服务返回了错误（HTTP %1$d）。</string>
+    <string name="btn_retry">重试</string>
+    <string name="webview_loading">正在连接…</string>
+</resources>

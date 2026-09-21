@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_primary">#5A67F2</color>
+    <color name="window_bg">#F6F7F9</color>
+    <color name="surface_c">#FFFFFF</color>
+    <color name="on_surface_c">#1B1D22</color>
+    <color name="on_surface_variant_c">#5C6068</color>
+    <color name="status_bar">#F6F7F9</color>
+    <color name="card_stroke">#E4E6EB</color>
+    <color name="launcher_bg">#161616</color>
+</resources>

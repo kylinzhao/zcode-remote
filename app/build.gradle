@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// 签名密钥不入库：本机存在 keystore/release.keystore 时用其正式签名，
+// 否则（如新克隆）回退 debug 签名，保证开箱可构建可安装。生成方式见 README。
+def keystoreExists = rootProject.file('keystore/release.keystore').exists()
+
+android {
+    namespace 'dev.zcode.remote'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "dev.zcode.remote"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreExists) {
+                storeFile rootProject.file('keystore/release.keystore')
+                storePassword "zcode-remote-2026"
+                keyAlias "zcode-remote"
+                keyPassword "zcode-remote-2026"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig keystoreExists ? signingConfigs.release : signingConfigs.debug
+        }
+        debug {
+            signingConfig keystoreExists ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+// 零资源依赖红线：只允许纯 JAR 依赖（不进资源链接管线，见 wayfinder/T8）。
+// zxing core 为纯 Java QR 解码库；UI 全部 android.* 平台控件。
+dependencies {
+    implementation 'com.google.zxing:core:3.5.3'
+    testImplementation 'junit:junit:4.13.2'
+}
