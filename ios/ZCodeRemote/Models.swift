@@ -49,7 +49,7 @@ final class InstanceStore: ObservableObject {
     }
 
     /// 新增或更新；返回是否为新增。
-    @DiscardableResult
+    @discardableResult
     func upsert(_ instance: Instance) -> Bool {
         if let idx = instances.firstIndex(where: { $0.id == instance.id }) {
             instances[idx] = instance

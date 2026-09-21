@@ -150,8 +150,9 @@ private struct ScannerBox: UIViewControllerRepresentable {
             self.onPayload = onPayload
         }
 
-        func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [VisionKit.Item],
-                         allItems: [VisionKit.Item]) {
+        func dataScanner(_ dataScanner: DataScannerViewController,
+                         didAdd addedItems: [DataScannerViewController.Item],
+                         allItems: [DataScannerViewController.Item]) {
             guard !fired else { return }
             for item in addedItems {
                 if let payload = item.barcode?.payloadString?.trimmingCharacters(in: .whitespacesAndNewlines),
