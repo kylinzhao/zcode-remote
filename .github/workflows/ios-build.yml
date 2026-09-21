@@ -48,10 +48,18 @@ jobs:
           echo "iPad UDID: $UDID"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
+          sleep 10
           xcrun simctl install "$UDID" ios/build/Build/Products/Debug-iphonesimulator/ZCodeRemote.app
-          xcrun simctl launch "$UDID" dev.zcode.remote -ZCODE_AUTOPEN_URL 'https://httpbin.org/user-agent' || true
-          sleep 14
-          xcrun simctl io "$UDID" screenshot shots/03_ipad_desktop_ua.png || true
+          xcrun simctl launch "$UDID" dev.zcode.remote || true
+          sleep 10
+          xcrun simctl io "$UDID" screenshot shots/03_ipad_list.png || true
+          xcrun simctl launch --terminate-running-process "$UDID" dev.zcode.remote \
+            -ZCODE_AUTOPEN_URL 'https://httpbin.org/user-agent' || true
+          sleep 16
+          xcrun simctl io "$UDID" screenshot shots/04_ipad_desktop_ua.png || true
+          # 诊断：app 最近日志（崩溃/渲染问题可见）
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact \
+            --predicate 'processImagePath CONTAINS "ZCodeRemote"' 2>/dev/null | tail -40 || true
 
       - uses: actions/upload-artifact@v4
         if: always()
