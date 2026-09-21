@@ -110,6 +110,11 @@ enum Urls {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
 }
 
+extension Array {
+    /// 恰好一个元素时返回它，否则 nil（`single` 的非崩溃版）。
+    var only: Element? { count == 1 ? first : nil }
+}
+
 extension Date {
     /// 中文相对时间："3分钟前"；nil → "未打开过"。
     static func relative(_ date: Date?) -> String {

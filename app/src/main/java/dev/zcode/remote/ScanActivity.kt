@@ -47,6 +47,9 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
     private val decodePool: ExecutorService = Executors.newSingleThreadExecutor()
     private var settled = false
     private var torchOn = false
+    /** 从 WebActivity 菜单进入时为 true：扫完用 CLEAR_TOP 复用调用方页面切换实例。 */
+    private val clearTop: Boolean
+        get() = intent?.getBooleanExtra(EXTRA_CLEAR_TOP, false) ?: false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +58,9 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnPaste.setOnClickListener {
-            startActivity(InstanceEditActivity.createIntent(this, instanceId = null, url = null, name = null))
+            val edit = InstanceEditActivity.createIntent(this, instanceId = null, url = null, name = null)
+            if (clearTop) edit.putExtra(InstanceEditActivity.EXTRA_CLEAR_TOP, true)
+            startActivity(edit)
             finish()
         }
         binding.btnTorch.setOnClickListener { toggleTorch() }
@@ -314,7 +319,7 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
             if (existing == null) R.string.scan_added else R.string.scan_exists,
             Toast.LENGTH_SHORT
         ).show()
-        startActivity(WebActivity.intent(this, instance.id))
+        startActivity(WebActivity.intent(this, instance.id, clearTop))
         finish()
     }
 
@@ -340,5 +345,6 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
 
     companion object {
         private const val RC_CAMERA = 41
+        const val EXTRA_CLEAR_TOP = "clearTop"
     }
 }

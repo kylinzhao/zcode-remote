@@ -7,16 +7,18 @@ struct WebScreen: View {
     let instanceID: UUID
 
     @ObservedObject private var store = InstanceStore.shared
+    @EnvironmentObject private var router: Router
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var confirmingDelete = false
+    @State private var showingScan = false
 
     private var instance: Instance? { store.instance(instanceID) }
 
     var body: some View {
         Group {
             if let instance {
-                WebViewContainer(instance: instance, confirmingDelete: $confirmingDelete)
+                WebViewContainer(instance: instance, confirmingDelete: $confirmingDelete, showingScan: $showingScan)
                     .navigationTitle(instance.name)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(.visible, for: .navigationBar)
@@ -39,14 +41,23 @@ struct WebScreen: View {
         } message: {
             Text("仅删除本机入口，不影响电脑端。")
         }
+        .sheet(isPresented: $showingScan) {
+            ScanSheet { instanceID in
+                // 先替换栈顶（本页被替换，sheet 随之消失），返回键直达列表
+                router.replaceTop(with: instanceID)
+                showingScan = false
+            }
+        }
     }
 }
 
-/// 承载 WebView 与工具条（刷新/复制/删除等）。
+/// 承载 WebView 与工具条（刷新/添加新实例/删除等）。
 private struct WebViewContainer: View {
     let instance: Instance
     @Binding var confirmingDelete: Bool
+    @Binding var showingScan: Bool
     @ObservedObject private var store = InstanceStore.shared
+    @EnvironmentObject private var router: Router
 
     @State private var progress: Double = 0
     @State private var loading = false
@@ -88,6 +99,10 @@ private struct WebViewContainer: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    Button {
+                        showingScan = true
+                    } label: { Label("添加新实例", systemImage: "plus") }
+
                     Button {
                         reloadToken += 1
                         errorText = nil

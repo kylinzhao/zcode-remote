@@ -68,7 +68,8 @@ class InstanceEditActivity : Activity() {
         InstanceStore.upsert(this, instance)
 
         if (existing == null) {
-            startActivity(WebActivity.intent(this, id))
+            val web = WebActivity.intent(this, id, intent.getBooleanExtra(EXTRA_CLEAR_TOP, false))
+            startActivity(web)
         }
         finish()
     }
@@ -77,6 +78,7 @@ class InstanceEditActivity : Activity() {
         private const val EXTRA_ID = "id"
         private const val EXTRA_URL = "url"
         private const val EXTRA_NAME = "name"
+        const val EXTRA_CLEAR_TOP = "clearTop"
 
         fun createIntent(context: Context, instanceId: String?, url: String?, name: String?): Intent =
             Intent(context, InstanceEditActivity::class.java).apply {

@@ -51,6 +51,14 @@ class WebActivity : Activity() {
             popup.menuInflater.inflate(R.menu.menu_web, popup.menu)
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.action_add -> {
+                        // 从页面内添加新实例：扫完/存完用 CLEAR_TOP 复用本页切换到新实例，返回栈保持 列表→页面
+                        startActivity(
+                            Intent(this, ScanActivity::class.java)
+                                .putExtra(ScanActivity.EXTRA_CLEAR_TOP, true)
+                        )
+                        true
+                    }
                     R.id.action_refresh -> { hideError(); binding.web.reload(); true }
                     R.id.action_browser -> { openExternally(instance?.url ?: ""); true }
                     R.id.action_copy -> { copyUrl(); true }
@@ -95,6 +103,20 @@ class WebActivity : Activity() {
         instance = fresh
         applyInstanceState()
         if (old != null && old.url != fresh.url && binding.error.visibility != View.VISIBLE) {
+            binding.web.loadUrl(fresh.url)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val id = intent.getStringExtra(EXTRA_ID) ?: return
+        val fresh = InstanceStore.load(this).firstOrNull { it.id == id } ?: return
+        val switched = fresh.id != instance?.id
+        instance = fresh
+        applyInstanceState()
+        if (switched) {
+            hideError()
             binding.web.loadUrl(fresh.url)
         }
     }
@@ -231,7 +253,11 @@ class WebActivity : Activity() {
     companion object {
         private const val EXTRA_ID = "id"
 
-        fun intent(context: Context, instanceId: String): Intent =
-            Intent(context, WebActivity::class.java).putExtra(EXTRA_ID, instanceId)
+        fun intent(context: Context, instanceId: String, clearTop: Boolean = false): Intent =
+            Intent(context, WebActivity::class.java).putExtra(EXTRA_ID, instanceId).apply {
+                if (clearTop) {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
+            }
     }
 }

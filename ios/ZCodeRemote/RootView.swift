@@ -1,11 +1,32 @@
 import SwiftUI
 import UIKit
 
+/// 导航路由：RootView 持有栈，WebScreen 可替换栈顶（页面内添加新实例时切换）。
+@MainActor
+final class Router: ObservableObject {
+    @Published var path = NavigationPath()
+
+    func open(_ id: UUID) {
+        path.append(id)
+    }
+
+    /// 替换当前栈顶（从页面内切换到新实例，返回栈保持 列表→页面）。
+    func replaceTop(with id: UUID) {
+        guard !path.isEmpty else {
+            path.append(id)
+            return
+        }
+        path.removeLast()
+        path.append(id)
+    }
+}
+
 struct RootView: View {
     @ObservedObject private var store = InstanceStore.shared
-    @State private var path = NavigationPath()
+    @StateObject private var router = Router()
     @State private var showingScan = false
     @State private var editing: Instance?
+    @State private var didAutoOpen = false
     private let autoOpenURL: String?
 
     init(autoOpenURL: String?) {
@@ -13,7 +34,7 @@ struct RootView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $router.path) {
             Group {
                 if store.instances.isEmpty {
                     emptyState
@@ -39,13 +60,11 @@ struct RootView: View {
             .sheet(isPresented: $showingScan) {
                 ScanSheet { instanceID in
                     showingScan = false
-                    path.append(instanceID)
+                    router.open(instanceID)
                 }
             }
             .sheet(item: $editing) { instance in
-                InstanceEditView(existing: instance) { saved in
-                    // 编辑保存后留在原地即可；列表与已打开页面会随 store 更新
-                }
+                InstanceEditView(existing: instance)
             }
             .task {
                 // CI/调试：启动参数 -ZCODE_AUTOPEN_URL 自动添加并打开
@@ -61,10 +80,16 @@ struct RootView: View {
                             createdAt: Date(), lastOpenedAt: nil)
                         store.upsert(instance)
                     }
-                    path.append(instance.id)
+                    router.open(instance.id)
+                    didAutoOpen = true
+                } else if !didAutoOpen, let single = store.instances.only {
+                    // 仅绑定一个实例：进入 App 直接打开该页面
+                    didAutoOpen = true
+                    router.open(single.id)
                 }
             }
         }
+        .environmentObject(router)
     }
 
     private var list: some View {
@@ -72,7 +97,7 @@ struct RootView: View {
             ForEach(store.instances) { instance in
                 Button {
                     store.markOpened(instance.id)
-                    path.append(instance.id)
+                    router.open(instance.id)
                 } label: {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(instance.name)

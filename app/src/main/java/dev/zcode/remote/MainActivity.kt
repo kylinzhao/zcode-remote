@@ -37,6 +37,7 @@ class MainActivity : Activity() {
 
         reload()
         handleIncoming(intent)
+        autoOpenIfSingle()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -78,6 +79,14 @@ class MainActivity : Activity() {
 
     private fun openEdit(url: String?, name: String?) {
         startActivity(InstanceEditActivity.createIntent(this, instanceId = null, url = url, name = name))
+    }
+
+    /** 仅绑定一个实例时，进程内首次进入 App 直接打开该页面。 */
+    private fun autoOpenIfSingle() {
+        if (autoOpened) return
+        val single = instances.singleOrNull() ?: return
+        autoOpened = true
+        openInstance(single)
     }
 
     private fun openInstance(instance: Instance) {
@@ -126,8 +135,7 @@ class MainActivity : Activity() {
         )
     }
 
-    private inner class InstanceAdapter : BaseAdapter() {
-        override fun getCount(): Int = instances.size
+    private inner class InstanceAdapter : BaseAdapter() {        override fun getCount(): Int = instances.size
         override fun getItem(position: Int): Instance = instances[position]
         override fun getItemId(position: Int): Long = position.toLong()
 
@@ -146,6 +154,11 @@ class MainActivity : Activity() {
             item.more.setOnClickListener { showItemMenu(it, instance) }
             return item.root
         }
+    }
+
+    companion object {
+        /** 进程级标记：一次存活期内只自动打开一次，避免从页面返回列表后被反复拉回。 */
+        private var autoOpened = false
     }
 }
 
