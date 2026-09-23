@@ -8,7 +8,6 @@ app/build/
 captures/
 .externalNativeBuild/
 .cxx/
-dist/
 screens/
 keystore/
 .video_agent/
