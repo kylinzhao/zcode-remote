@@ -41,6 +41,11 @@ jobs:
             -ZCODE_AUTOPEN_URL 'https://httpbin.org/user-agent' || true
           sleep 14
           xcrun simctl io "$UDID" screenshot shots/02_iphone_web.png || true
+          # 冷启动恢复：再次启动（不带参数、杀掉旧进程模拟后台被杀）
+          # 应直达上一次打开的实例页面，而不是回到列表
+          xcrun simctl launch --terminate-running-process "$UDID" dev.zcode.remote || true
+          sleep 10
+          xcrun simctl io "$UDID" screenshot shots/02b_iphone_restore.png || true
 
       - name: Boot iPad simulator and verify desktop-form web
         run: |

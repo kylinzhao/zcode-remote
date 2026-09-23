@@ -26,6 +26,7 @@
 - [T9 App 内扫码绑定](tickets/T9-in-app-scanning.md) — 主入口改为应用内扫码（zxing core JAR + camera2 自研壳），扫完自动存实例并打开；粘贴兜底
 - [T10 iOS 版](tickets/T10-ios-version.md) — SwiftUI + WKWebView + DataScanner；iPad 桌面形态为每实例开关（desktop UA + preferredContentMode）；无 Xcode，CI(macos-15) 构建验证
 - [T11 单实例直达与页面内添加](tickets/T11-single-instance-autopen.md) — 仅一个实例时进 App 直开；页面菜单「添加新实例」clearTop/replaceTop 保证返回栈 列表→页面
+- [T12 页面状态保持与冷启动直达](tickets/T12-page-state-restore.md) — 冷启动按 lastOpenedAt 直达上次实例；热唤起（ROM 清栈）按 LastPage 标记恢复退出前页面；savedInstanceState 区分系统重建
 
 ## Not yet specified
 

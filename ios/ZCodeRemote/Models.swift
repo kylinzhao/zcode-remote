@@ -132,9 +132,17 @@ enum Urls {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
 }
 
-extension Array {
+extension Array where Element == Instance {
     /// 恰好一个元素时返回它，否则 nil（`single` 的非崩溃版）。
     var only: Element? { count == 1 ? first : nil }
+
+    /// 最近打开过的实例（冷启动恢复用）；都没有打开记录时返回 nil。
+    var lastOpened: Element? {
+        compactMap { instance -> (Instance, Date)? in
+            instance.lastOpenedAt.map { (instance, $0) }
+        }
+        .max { $0.1 < $1.1 }?.0
+    }
 }
 
 extension Date {

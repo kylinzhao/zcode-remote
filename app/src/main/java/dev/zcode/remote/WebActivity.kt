@@ -110,6 +110,7 @@ class WebActivity : Activity() {
         val old = instance
         instance = fresh
         applyInstanceState()
+        LastPage.markPage(this, fresh.id)
         if (old != null && old.url != fresh.url && binding.error.visibility != View.VISIBLE) {
             binding.web.loadUrl(fresh.url)
         }
@@ -123,6 +124,7 @@ class WebActivity : Activity() {
         val switched = fresh.id != instance?.id
         instance = fresh
         applyInstanceState()
+        LastPage.markPage(this, fresh.id)
         if (switched) {
             hideError()
             binding.web.loadUrl(fresh.url)
@@ -270,7 +272,10 @@ class WebActivity : Activity() {
 
     override fun onPause() {
         resumed = false
-        instance?.let { InstanceStore.upsert(this, it) }
+        instance?.let {
+            InstanceStore.upsert(this, it)
+            LastPage.markPage(this, it.id)
+        }
         super.onPause()
     }
 

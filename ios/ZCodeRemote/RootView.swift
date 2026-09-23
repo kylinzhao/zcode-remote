@@ -82,10 +82,15 @@ struct RootView: View {
                     }
                     router.open(instance.id)
                     didAutoOpen = true
-                } else if !didAutoOpen, let single = store.instances.only {
-                    // 仅绑定一个实例：进入 App 直接打开该页面
+                } else if !didAutoOpen {
+                    // 冷启动直达：打开最近一次使用的实例，省去再选一次主机。
+                    // App 在后台被系统杀掉后再次打开即冷启动（导航栈已丢）；
+                    // 进程未死的前台切换由系统保留页面栈，不会重新进入 .task。
+                    // 全部实例都从未打开过时，仅一台则沿用旧的单实例直达。
                     didAutoOpen = true
-                    router.open(single.id)
+                    if let target = store.instances.lastOpened ?? store.instances.only {
+                        router.open(target.id)
+                    }
                 }
             }
         }

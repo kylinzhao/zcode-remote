@@ -121,8 +121,32 @@ fun relativeTime(context: Context, ts: Long): String {
     return when {
         minutes < 1L -> context.getString(R.string.just_now)
         minutes < 60L -> context.getString(R.string.minutes_ago, minutes)
-        minutes < 1440L -> context.getString(R.string.hours_ago, minutes / 60L)
-        minutes < 43200L -> context.getString(R.string.days_ago, minutes / 1440L)
+        minutes < 1440L -> context.getString(R.string.hours_ago, minutes / 60)
+        minutes < 43200L -> context.getString(R.string.days_ago, minutes / 1440)
         else -> SimpleDateFormat("yyyy-M-d", Locale.getDefault()).format(Date(ts))
     }
+}
+
+/**
+ * 记录退后台时停在哪个页面（"list" 或 "page:<instanceId>"）。
+ * 部分 ROM 启动器以启动 Intent 再次唤起 singleTask 根 Activity 时会清掉上方页面，
+ * onNewIntent 据此恢复到退出前所在页面，而不是落回列表。
+ */
+object LastPage {
+    private const val PREFS = "settings"
+    private const val KEY = "last_page"
+
+    fun markList(context: Context) = mark(context, "list")
+
+    fun markPage(context: Context, instanceId: String) = mark(context, "page:$instanceId")
+
+    private fun mark(context: Context, value: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY, value).apply()
+    }
+
+    /** 上次停在的实例页面 id；停在列表或无记录返回 null。 */
+    fun pageInstance(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY, null)?.takeIf { it.startsWith("page:") }?.removePrefix("page:")
 }

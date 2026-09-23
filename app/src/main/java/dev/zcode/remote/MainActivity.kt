@@ -37,8 +37,13 @@ class MainActivity : Activity() {
         binding.btnAddEmpty.setOnClickListener { startActivity(Intent(this, ScanActivity::class.java)) }
 
         reload()
-        handleIncoming(intent)
-        autoOpenIfSingle()
+        if (savedInstanceState == null) {
+            // 全新任务/冷启动：先消化外部入口（深链接/分享），没有则恢复上次打开的实例。
+            // savedInstanceState != null 说明系统在重建返回栈（页面会自行恢复），
+            // 此时也不重复消化深链接（否则进程被杀重建后会再弹一次编辑页）。
+            val fromOutside = handleIncoming(intent)
+            if (!fromOutside) restoreLastPage()
+        }
         ensureNotificationPermission()
     }
 
@@ -57,12 +62,29 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // 启动器再次唤起（HOME 后点图标）：部分 ROM 会以启动 Intent 直达 singleTask
+        // 根并清掉上方页面——按退出前所在页面恢复，落回列表则是用户主动停在列表。
+        // 无 action 的 Intent 只会来自 am start，语义等同于启动器唤起。
+        if (intent.action == null || intent.action == Intent.ACTION_MAIN) {
+            reload()
+            val lastPageId = LastPage.pageInstance(this)
+            if (lastPageId != null) {
+                instances.firstOrNull { it.id == lastPageId }?.let { openInstance(it) }
+            }
+            return
+        }
         handleIncoming(intent)
     }
 
     override fun onResume() {
         super.onResume()
         reload()
+    }
+
+    override fun onPause() {
+        // 退后台/跳转页面时记录停留位置：onNewIntent 热恢复的依据
+        LastPage.markList(this)
+        super.onPause()
     }
 
     private fun reload() {
@@ -72,35 +94,44 @@ class MainActivity : Activity() {
         binding.empty.visibility = if (instances.isEmpty()) View.VISIBLE else View.GONE
     }
 
-    /** 接收 deep link（扫码 URL）与系统分享（含链接的文本）。 */
-    private fun handleIncoming(intent: Intent?) {
-        intent ?: return
+    /** 接收 deep link（扫码 URL）与系统分享（含链接的文本）。返回是否消化了外部入口。 */
+    private fun handleIncoming(intent: Intent?): Boolean {
+        intent ?: return false
         val candidate = when (intent.action) {
             Intent.ACTION_VIEW -> intent.dataString
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
             else -> null
-        } ?: return
-        val raw = candidate ?: return
+        } ?: return false
+        val raw = candidate ?: return false
         val url = Urls.sanitize(raw) ?: SharedText.extractUrl(raw)?.let { Urls.sanitize(it) }
         // 处理完立即清空 intent，避免旋转/重建后重复弹出
         setIntent(Intent(this, MainActivity::class.java))
         if (url == null) {
             Toast.makeText(this, getString(R.string.invalid_url), Toast.LENGTH_LONG).show()
-            return
+            return true
         }
         openEdit(url, Urls.suggestName(url))
+        return true
     }
 
     private fun openEdit(url: String?, name: String?) {
         startActivity(InstanceEditActivity.createIntent(this, instanceId = null, url = url, name = name))
     }
 
-    /** 仅绑定一个实例时，进程内首次进入 App 直接打开该页面。 */
-    private fun autoOpenIfSingle() {
+    /**
+     * 冷启动直达：打开最近一次使用的实例，省去再选一次主机。
+     * App 在后台被系统回收后再点图标实际是冷启动，页面栈已丢——在这里按
+     * lastOpenedAt（每次打开都会更新并持久化）恢复；进程未死的前台切换
+     * 由系统保留原页面，不会走到这里。全部实例都从未打开过时，
+     * 仅一台则沿用旧的单实例直达行为。
+     */
+    private fun restoreLastPage() {
         if (autoOpened) return
-        val single = instances.singleOrNull() ?: return
+        val target = instances.filter { it.lastOpenedAt > 0L }.maxByOrNull { it.lastOpenedAt }
+            ?: instances.singleOrNull()
+            ?: return
         autoOpened = true
-        openInstance(single)
+        openInstance(target)
     }
 
     private fun openInstance(instance: Instance) {
