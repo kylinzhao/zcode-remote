@@ -56,4 +56,10 @@
     <string name="error_http">服务返回了错误（HTTP %1$d）。</string>
     <string name="btn_retry">重试</string>
     <string name="webview_loading">正在连接…</string>
+
+    <string name="dot_unread">这台电脑有任务已完成的提醒</string>
+    <string name="notif_channel">任务提醒</string>
+    <string name="notif_channel_desc">电脑端 ZCode 任务结束提醒</string>
+    <string name="notif_title">ZCode 任务已结束</string>
+    <string name="notif_text">「%1$s」的任务执行完毕，点击查看</string>
 </resources>

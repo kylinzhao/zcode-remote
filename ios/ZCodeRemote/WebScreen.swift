@@ -128,8 +128,12 @@ private struct WebViewContainer: View {
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = instance.keepScreenOn
             store.markOpened(instance.id)
+            // 用户正在看这台电脑：标记可见并消化已有的红点与提醒
+            TaskDone.pageVisible = true
+            TaskDone.clear(for: instance.id)
         }
         .onDisappear {
+            TaskDone.pageVisible = false
             if instance.keepScreenOn {
                 UIApplication.shared.isIdleTimerDisabled = false
             }
@@ -179,6 +183,11 @@ private struct WebView: UIViewRepresentable {
         let desktop = instance.desktopMode
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.preferredContentMode = desktop ? .desktop : .mobile
+        // 任务结束检测：页面脚本执行前注入，通过 message handler 回传 native
+        config.userContentController.addUserScript(
+            WKUserScript(source: TaskDetector.source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        config.userContentController.add(context.coordinator, name: TaskDetector.messageHandlerName)
         let view = WKWebView(frame: .zero, configuration: config)
         if desktop {
             view.customUserAgent = Urls.desktopUserAgent
@@ -205,8 +214,13 @@ private struct WebView: UIViewRepresentable {
         }
     }
 
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        // 打断 message handler 对 coordinator 的强引用
+        uiView.configuration.userContentController.removeAllScriptMessageHandlers()
+    }
+
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: WebView
         var progressObservation: NSKeyValueObservation?
         var lastReloadToken = 0
@@ -214,6 +228,13 @@ private struct WebView: UIViewRepresentable {
 
         init(parent: WebView) {
             self.parent = parent
+        }
+
+        /// 检测脚本上报任务结束
+        func userContentController(_ userContentController: WKUserContentController,
+                                   didReceive message: WKScriptMessage) {
+            guard message.name == TaskDetector.messageHandlerName else { return }
+            TaskDone.handleFinished(instanceID: parent.instance.id)
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

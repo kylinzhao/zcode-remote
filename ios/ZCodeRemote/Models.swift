@@ -10,6 +10,8 @@ struct Instance: Codable, Identifiable, Equatable, Hashable {
     var desktopMode: Bool
     var createdAt: Date
     var lastOpenedAt: Date?
+    /// 任务结束且用户不在场的未读提醒；nil = 无。Optional 保证旧 JSON 文件可解码。
+    var unreadDone: Bool?
 }
 
 /// 实例本地存储：Application Support 下 JSON 文件。
@@ -66,6 +68,26 @@ final class InstanceStore: ObservableObject {
         instances[idx].lastOpenedAt = Date()
         persist()
     }
+
+    /// 页面侧检测到任务结束（用户不在场）→ 点亮该实例红点。
+    func markDone(_ id: UUID) {
+        guard let idx = instances.firstIndex(where: { $0.id == id }) else { return }
+        if instances[idx].unreadDone != true {
+            instances[idx].unreadDone = true
+            persist()
+        }
+    }
+
+    /// 用户打开该实例 → 清除红点。
+    func clearDone(_ id: UUID) {
+        guard let idx = instances.firstIndex(where: { $0.id == id }) else { return }
+        if instances[idx].unreadDone != nil {
+            instances[idx].unreadDone = nil
+            persist()
+        }
+    }
+
+    var unreadDoneCount: Int { instances.count { $0.unreadDone == true } }
 
     func remove(_ id: UUID) {
         instances.removeAll { $0.id == id }

@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import android.webkit.SslErrorHandler
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -28,6 +29,7 @@ class WebActivity : Activity() {
 
     private lateinit var binding: ActivityWebBinding
     private var instance: Instance? = null
+    private var resumed = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,6 +96,12 @@ class WebActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
+        // 用户正在看这台电脑，红点与提醒就地消化
+        instance?.let {
+            InstanceStore.clearDone(this, it.id)
+            Notifier.cancel(this, it.id)
+        }
         // 编辑页可能改了名称/常亮开关/网址，回来时同步
         val id = instance?.id ?: return
         val fresh = InstanceStore.load(this).firstOrNull { it.id == id } ?: run {
@@ -156,8 +164,19 @@ class WebActivity : Activity() {
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
         web.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        web.addJavascriptInterface(TaskBridge(), DetectorJs.BRIDGE_NAME)
 
         web.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                // 页面脚本执行前注入检测器（包一层 WebSocket 统计流量）
+                view.evaluateJavascript(DetectorJs.source, null)
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                // 兜底：脚本内幂等，重复注入无害
+                view.evaluateJavascript(DetectorJs.source, null)
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val scheme = request.url.scheme?.lowercase()
                 return when (scheme) {
@@ -208,6 +227,19 @@ class WebActivity : Activity() {
         }
     }
 
+    /** 供注入脚本回调：检测到任务结束且用户不在场。 */
+    private inner class TaskBridge {
+        @JavascriptInterface
+        fun onTaskFinished(payload: String) {
+            val target = instance ?: return
+            if (resumed) return // 双保险：页面认为不可见但本页其实在前台
+            runOnUiThread {
+                InstanceStore.markDone(this@WebActivity, target.id)
+                Notifier.post(this@WebActivity, target.id, target.name)
+            }
+        }
+    }
+
     private fun showError(message: String) {
         binding.errorMsg.text = message
         binding.error.visibility = View.VISIBLE
@@ -237,6 +269,7 @@ class WebActivity : Activity() {
     }
 
     override fun onPause() {
+        resumed = false
         instance?.let { InstanceStore.upsert(this, it) }
         super.onPause()
     }

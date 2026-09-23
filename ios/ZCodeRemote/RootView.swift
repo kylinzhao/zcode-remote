@@ -97,15 +97,25 @@ struct RootView: View {
             ForEach(store.instances) { instance in
                 Button {
                     store.markOpened(instance.id)
+                    TaskDone.clear(for: instance.id)
                     router.open(instance.id)
                 } label: {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(instance.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        Text("\(host(of: instance)) · \(Date.relative(instance.lastOpenedAt))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(instance.name)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text("\(host(of: instance)) · \(Date.relative(instance.lastOpenedAt))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if instance.unreadDone == true {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 10, height: 10)
+                                .accessibilityLabel("这台电脑有任务已完成的提醒")
+                        }
                     }
                     .padding(.vertical, 2)
                 }

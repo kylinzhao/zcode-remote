@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -38,6 +39,19 @@ class MainActivity : Activity() {
         reload()
         handleIncoming(intent)
         autoOpenIfSingle()
+        ensureNotificationPermission()
+    }
+
+    /** 任务结束提醒要发通知（桌面图标红点的来源），API 33+ 需运行时授权，问一次即可。 */
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) return
+        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("notif_asked", false)) return
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED
+        ) return
+        prefs.edit().putBoolean("notif_asked", true).apply()
+        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -92,6 +106,9 @@ class MainActivity : Activity() {
     private fun openInstance(instance: Instance) {
         instance.lastOpenedAt = System.currentTimeMillis()
         InstanceStore.upsert(this, instance)
+        // 打开即消化该实例的红点与提醒
+        InstanceStore.clearDone(this, instance.id)
+        Notifier.cancel(this, instance.id)
         startActivity(WebActivity.intent(this, instance.id))
     }
 
@@ -150,6 +167,7 @@ class MainActivity : Activity() {
                 append(" · ")
                 append(relativeTime(this@MainActivity, instance.lastOpenedAt))
             }
+            item.dot.visibility = if (instance.unreadDone) View.VISIBLE else View.GONE
             item.root.setOnClickListener { openInstance(instance) }
             item.more.setOnClickListener { showItemMenu(it, instance) }
             return item.root

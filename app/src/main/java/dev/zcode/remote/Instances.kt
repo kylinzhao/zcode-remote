@@ -15,6 +15,7 @@ data class Instance(
     var keepScreenOn: Boolean,
     var createdAt: Long,
     var lastOpenedAt: Long,
+    var unreadDone: Boolean = false,
 )
 
 object InstanceStore {
@@ -35,6 +36,7 @@ object InstanceStore {
                     keepScreenOn = o.optBoolean("keepScreenOn", false),
                     createdAt = o.optLong("createdAt", 0L),
                     lastOpenedAt = o.optLong("lastOpenedAt", 0L),
+                    unreadDone = o.optBoolean("unreadDone", false),
                 )
             }
         }.getOrDefault(emptyList()).toMutableList()
@@ -51,6 +53,7 @@ object InstanceStore {
                     .put("keepScreenOn", i.keepScreenOn)
                     .put("createdAt", i.createdAt)
                     .put("lastOpenedAt", i.lastOpenedAt)
+                    .put("unreadDone", i.unreadDone)
             )
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -67,6 +70,29 @@ object InstanceStore {
     fun remove(context: Context, id: String) {
         save(context, load(context).filterNot { it.id == id })
     }
+
+    /** 页面侧检测到任务结束（用户不在场）→ 点亮该实例红点。 */
+    fun markDone(context: Context, id: String) {
+        val list = load(context)
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx >= 0 && !list[idx].unreadDone) {
+            list[idx].unreadDone = true
+            save(context, list)
+        }
+    }
+
+    /** 用户打开该实例 → 清除红点。 */
+    fun clearDone(context: Context, id: String) {
+        val list = load(context)
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx >= 0 && list[idx].unreadDone) {
+            list[idx].unreadDone = false
+            save(context, list)
+        }
+    }
+
+    fun unreadDoneCount(context: Context): Int =
+        load(context).count { it.unreadDone }
 }
 
 object Urls {
