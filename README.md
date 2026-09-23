@@ -82,10 +82,21 @@ WebSocket 的**流量形态**——任务流式执行时收包字节持续高位
 电脑端装一个 task-notify 插件（Stop hook，任务结束时推 ntfy.sh），手机端 App 内嵌订阅：
 
 1. 编辑实例 → 点「生成」得到私有 topic（ntfy 的安全模型：不知道 topic 名就收不到）；
-2. 点「复制电脑端安装命令」，到**这台电脑**的终端粘贴运行（脚本幂等，重复运行无害）；
-3. 重启电脑端 ZCode 桌面端，hook 即生效。可先在终端跑
-   `python3 ~/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify/0.1.0/hooks/task_notify.py --test`
-   立即验证推送；
+2. 电脑端安装（二选一）：
+   - **让电脑端 Agent 代劳（推荐）**：把下面的提示词发给那台电脑上的 ZCode——
+     把 `<topic>` 换成上一步生成的主题（忘了换也没关系，agent 会向你要）：
+
+     ```text
+     请帮我在这台电脑上安装 ZCode 的「任务结束推送」插件 task-notify。装好后，我手机上的 ZCode Remote 应用能在任何时刻（包括锁屏）收到任务结束提醒。
+
+     步骤：
+     1. 获取安装脚本：git clone --depth 1 https://github.com/kylinzhao/zcode-remote /tmp/zcode-remote（目录已存在则 git -C /tmp/zcode-remote pull）；git 不可用时改为下载 https://raw.githubusercontent.com/kylinzhao/zcode-remote/main/desktop-hook/install.sh 保存为 /tmp/install.sh。
+     2. 运行安装：bash /tmp/zcode-remote/desktop-hook/install.sh <topic>（用 /tmp/install.sh 时相应替换路径）。topic 在我手机的 ZCode Remote「编辑实例 → 任务结束提醒」里生成，格式为字母/数字/-/_ 组成；如果我没有提供，先向我要，不要自己编造。
+     3. 验证：安装脚本会打印验证命令。运行 python3 ~/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify/0.1.0/hooks/task_notify.py --test 发送测试推送，再用 curl -sS "https://ntfy.sh/<topic>/json?poll=1" 确认能查到这条消息（查不到就等 60 秒重试一次：hook 有 60 秒限流）。
+     4. 完成后明确告诉我「重启 ZCode 桌面端后生效」。除本插件相关文件外，不要改动 ~/.zcode 下的任何其他文件。
+     ```
+   - **手动**：点「复制电脑端安装命令」，到**这台电脑**的终端粘贴运行（脚本幂等，重复运行无害）；
+3. 重启电脑端 ZCode 桌面端，hook 即生效；
 4. 手机 App 出现常驻的「正在监听」通知（前台服务，耗电极低），收到推送即点亮红点并提醒。
 
 推送经 `ntfy.sh` 公共服务中转（免费、无需注册）；hook 默认 60s 限流，过滤交互式连续短回复。
