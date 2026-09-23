@@ -79,6 +79,8 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         reload()
+        // 实例/topic 可能在别处被改（编辑页、删除、通知点击），回来时对齐监听
+        TaskListenService.ensure(this)
     }
 
     override fun onPause() {

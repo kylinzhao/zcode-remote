@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- 任务结束提醒通知（API 33+ 运行时申请） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- ntfy 监听前台服务（锁屏/后台也能收到任务结束推送） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:allowBackup="true"
@@ -58,6 +61,11 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize" />
+
+        <service
+            android:name=".TaskListenService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

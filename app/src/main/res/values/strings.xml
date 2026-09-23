@@ -38,6 +38,19 @@
     <string name="save">保存</string>
     <string name="cancel">取消</string>
 
+    <string name="field_topic">任务结束提醒（ntfy 主题）</string>
+    <string name="field_topic_hint">留空 = 不启用</string>
+    <string name="field_topic_helper">生成主题 → 复制安装命令 → 在这台电脑的终端运行一次（需重启电脑端 ZCode 生效）。锁屏/进程被杀也能收到推送。</string>
+    <string name="btn_gen_topic">生成</string>
+    <string name="btn_copy_install">复制电脑端安装命令</string>
+    <string name="topic_invalid">主题只允许字母、数字、- 和 _（1-64 位）</string>
+    <string name="topic_needed">先填写或生成主题，再复制安装命令</string>
+    <string name="install_copied">安装命令已复制：粘贴到这台电脑的终端运行</string>
+    <string name="listen_channel">任务提醒监听</string>
+    <string name="listen_channel_desc">保持与 ntfy 的连接以接收任务结束推送</string>
+    <string name="listen_notif_title">ZCode Remote 正在监听任务提醒</string>
+    <string name="listen_notif_text">点此可随时关闭通知（不影响监听）</string>
+
     <string name="delete_confirm_title">删除实例</string>
     <string name="delete_confirm_msg">确定删除「%1$s」吗？仅删除手机上的入口，不影响电脑端。</string>
 

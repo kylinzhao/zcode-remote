@@ -1,8 +1,11 @@
 package dev.zcode.remote
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import dev.zcode.remote.databinding.ActivityEditBinding
@@ -30,6 +33,7 @@ class InstanceEditActivity : Activity() {
             binding.inputName.setText(existing.name)
             binding.inputUrl.setText(existing.url)
             binding.switchKeepScreenOn.isChecked = existing.keepScreenOn
+            binding.inputTopic.setText(existing.ntfyTopic.orEmpty())
         } else {
             val url = intent.getStringExtra(EXTRA_URL)
             binding.inputUrl.setText(url)
@@ -42,6 +46,27 @@ class InstanceEditActivity : Activity() {
 
         binding.btnSave.setOnClickListener { save() }
         binding.btnCancel.setOnClickListener { finish() }
+        binding.btnGenTopic.setOnClickListener {
+            binding.inputTopic.setText(Ntfy.randomTopic())
+        }
+        binding.btnCopyInstall.setOnClickListener { copyInstallCommand() }
+    }
+
+    /** 复制电脑端一键安装命令（raw 模板把 __TOPIC__ 换成本实例的 topic）。 */
+    private fun copyInstallCommand() {
+        val topic = binding.inputTopic.text?.toString()?.trim().orEmpty()
+        if (topic.isEmpty()) {
+            Toast.makeText(this, R.string.topic_needed, Toast.LENGTH_LONG).show()
+            return
+        }
+        val script = resources.openRawResource(R.raw.install_hook)
+            .bufferedReader().use { it.readText() }
+            .replace("__TOPIC__", topic)
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("install", script))
+        if (Build.VERSION.SDK_INT < 33) {
+            Toast.makeText(this, R.string.install_copied, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun save() {
@@ -54,6 +79,12 @@ class InstanceEditActivity : Activity() {
             ?: Urls.suggestName(url)
             ?: getString(R.string.app_name)
 
+        val topic = binding.inputTopic.text?.toString()?.trim().orEmpty()
+        if (topic.isNotEmpty() && !Ntfy.isValidTopic(topic)) {
+            Toast.makeText(this, R.string.topic_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+
         val id = editingId ?: UUID.randomUUID().toString()
         val existing = if (editingId != null) {
             InstanceStore.load(this).firstOrNull { it.id == id }
@@ -65,7 +96,10 @@ class InstanceEditActivity : Activity() {
         instance.name = name
         instance.url = url
         instance.keepScreenOn = binding.switchKeepScreenOn.isChecked
+        instance.ntfyTopic = topic.ifEmpty { null }
         InstanceStore.upsert(this, instance)
+        // 新增/删除 topic 都要同步监听服务的连接
+        TaskListenService.ensure(this)
 
         if (existing == null) {
             val web = WebActivity.intent(this, id, intent.getBooleanExtra(EXTRA_CLEAR_TOP, false))

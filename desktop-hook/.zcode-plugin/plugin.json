@@ -1,0 +1,7 @@
+{
+  "name": "task-notify",
+  "version": "0.1.0",
+  "description": "任务结束提醒：Stop 事件推送 ntfy 到手机 ZCode Remote",
+  "author": { "name": "zcode-remote" },
+  "hooks": "./hooks/hooks.json"
+}

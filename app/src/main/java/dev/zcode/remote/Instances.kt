@@ -16,6 +16,7 @@ data class Instance(
     var createdAt: Long,
     var lastOpenedAt: Long,
     var unreadDone: Boolean = false,
+    var ntfyTopic: String? = null,
 )
 
 object InstanceStore {
@@ -37,6 +38,7 @@ object InstanceStore {
                     createdAt = o.optLong("createdAt", 0L),
                     lastOpenedAt = o.optLong("lastOpenedAt", 0L),
                     unreadDone = o.optBoolean("unreadDone", false),
+                    ntfyTopic = o.optString("ntfyTopic").takeIf { it.isNotEmpty() },
                 )
             }
         }.getOrDefault(emptyList()).toMutableList()
@@ -54,6 +56,7 @@ object InstanceStore {
                     .put("createdAt", i.createdAt)
                     .put("lastOpenedAt", i.lastOpenedAt)
                     .put("unreadDone", i.unreadDone)
+                    .also { if (i.ntfyTopic != null) it.put("ntfyTopic", i.ntfyTopic) }
             )
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
