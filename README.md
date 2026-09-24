@@ -18,7 +18,7 @@
 
 ## 安装
 
-1. 把 `dist/ZCodeRemote-v1.2.0-release.apk` 传到手机（微信文件传输助手 / AirAndroid / 数据线均可）；
+1. 把 `dist/ZCodeRemote-v1.2.1-release.apk` 传到手机（微信文件传输助手 / AirAndroid / 数据线均可）；
 2. 点击安装（需允许「安装未知来源应用」）；
 3. 打开 ZCode Remote，点右下角「＋」添加第一台电脑。
 

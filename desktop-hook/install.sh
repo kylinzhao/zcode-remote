@@ -1,9 +1,16 @@
 #!/bin/bash
 # ZCode 任务结束提醒 hook 安装脚本（在电脑端运行一次）。
 # 用法: bash install.sh <ntfy-topic>
-# 作用：安装 task-notify 插件（Stop hook → ntfy.sh 推送）并写入 topic 配置。
-# 注意：app 内 res/raw/install_hook.sh 是本文件的模板副本（TOPIC="${1:-}" 换成
-#       TOPIC="__TOPIC__"），改动请两处同步。
+#
+# 重要：仅写插件文件不够——ZCode 只加载「已注册 marketplace 且在 enabledPlugins
+# 里启用」的插件（否则静默跳过，Stop hook 一次都不会跑）。本脚本补齐全部三件：
+#   1. marketplace 源目录 + marketplaces 缓存副本 + known_marketplaces.json 注册
+#   2. installed_plugins.json 条目（source "./task-notify"，与本地插件同形状）
+#   3. ~/.zcode/cli/config.json 的 plugins.enabledPlugins 启用
+# 全程幂等，重复运行无害。
+#
+# 注意：app 内 res/raw/install_hook.sh 是本文件的模板副本（TOPIC 换成 __TOPIC__），
+#       改动请两处同步。
 set -e
 
 TOPIC="${1:-}"
@@ -15,12 +22,30 @@ case "$TOPIC" in
   *[!A-Za-z0-9_-]*) echo "topic 只允许字母/数字/-/_（1-64 位）"; exit 1 ;;
 esac
 
-BASE="$HOME/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify/0.1.0"
-mkdir -p "$BASE/hooks" "$BASE/.zcode-plugin"
+SRC="$HOME/.zcode/task-notify-marketplace"
+CACHE="$HOME/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify"
+MP="$HOME/.zcode/cli/plugins/marketplaces/dev-task-notify-local"
 
 printf '# ZCode task-notify 的 ntfy topic\n%s\n' "$TOPIC" > "$HOME/.zcode/task-notify.conf"
 
-cat > "$BASE/.zcode-plugin/plugin.json" <<'JSON'
+# ---- 1. marketplace 源目录（稳定路径；脚本内容内联，不依赖本仓库在场）----
+mkdir -p "$SRC/task-notify/.zcode-plugin" "$SRC/task-notify/hooks"
+
+cat > "$SRC/marketplace.json" <<'JSON'
+{
+  "name": "dev-task-notify-local",
+  "plugins": [
+    {
+      "name": "task-notify",
+      "source": "./task-notify",
+      "version": "0.1.0",
+      "description": "任务结束提醒：Stop 事件推送 ntfy 到手机 ZCode Remote"
+    }
+  ]
+}
+JSON
+
+cat > "$SRC/task-notify/.zcode-plugin/plugin.json" <<'JSON'
 {
   "name": "task-notify",
   "version": "0.1.0",
@@ -30,7 +55,7 @@ cat > "$BASE/.zcode-plugin/plugin.json" <<'JSON'
 }
 JSON
 
-cat > "$BASE/hooks/hooks.json" <<'JSON'
+cat > "$SRC/task-notify/hooks/hooks.json" <<'JSON'
 {
   "hooks": {
     "Stop": [
@@ -48,7 +73,7 @@ cat > "$BASE/hooks/hooks.json" <<'JSON'
 }
 JSON
 
-cat > "$BASE/hooks/task_notify.py" <<'PY'
+cat > "$SRC/task-notify/hooks/task_notify.py" <<'PY'
 #!/usr/bin/env python3
 """task-notify: ZCode Stop hook → ntfy 推送。所有异常静默，绝不打断会话。"""
 import json, os, socket, sys, time, urllib.request
@@ -133,35 +158,51 @@ if __name__ == "__main__":
     sys.exit(0)
 PY
 
-python3 - "$BASE" <<'PY'
+# ---- 2. 缓存副本：installPath 与 marketplaces 缓存 ----
+rm -rf "$HOME/.zcode/cli/plugins/cache/dev-task-notify-local" "$MP"
+mkdir -p "$(dirname "$CACHE")"
+cp -R "$SRC/task-notify" "$CACHE"
+cp -R "$SRC" "$MP"
+
+# ---- 3. 三处 JSON 注册（marketplace / 安装表 / 启用开关）----
+python3 - "$SRC" "$CACHE" <<'PY'
 import datetime, json, os, sys, uuid
 
-base = sys.argv[1]
-path = os.path.expanduser("~/.zcode/cli/plugins/installed_plugins.json")
-try:
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-except Exception:
-    data = {"version": 1, "plugins": []}
-entry = {
-    "id": "task-notify@dev-task-notify-local",
-    "name": "task-notify",
-    "marketplace": "dev-task-notify-local",
-    "version": "0.1.0",
-    "installPath": base,
-    "installedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-    "updatedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-    "scope": "user",
-    "source": "task-notify-local",
-    "cacheTransactionId": str(uuid.uuid4()),
-}
-plugins = [p for p in data.get("plugins", []) if p.get("id") != entry["id"]]
-plugins.append(entry)
-data["plugins"] = plugins
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=1)
-print("插件已注册:", entry["id"])
+src, cache = sys.argv[1], sys.argv[2]
+home = os.path.expanduser("~")
+now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+txn = str(uuid.uuid4())
+pid = "task-notify@dev-task-notify-local"
+
+p = home + "/.zcode/cli/plugins/known_marketplaces.json"
+d = json.load(open(p))
+d["marketplaces"] = [m for m in d.get("marketplaces", []) if m.get("id") != "dev-task-notify-local"]
+d["marketplaces"].append({
+    "id": "dev-task-notify-local",
+    "source": {"source": "directory", "path": src},
+    "name": "dev-task-notify-local",
+    "description": "task-notify：ZCode 任务结束推送到手机 ZCode Remote",
+    "addedAt": now, "lastUpdated": now, "pluginCount": 1, "cacheTransactionId": txn,
+})
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=1)
+
+p = home + "/.zcode/cli/plugins/installed_plugins.json"
+d = json.load(open(p))
+d["plugins"] = [x for x in d.get("plugins", []) if x.get("id") != pid]
+d["plugins"].append({
+    "id": pid, "name": "task-notify", "marketplace": "dev-task-notify-local",
+    "version": "0.1.0", "installPath": cache,
+    "installedAt": now, "updatedAt": now, "scope": "user",
+    "source": "./task-notify", "cacheTransactionId": txn,
+})
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=1)
+
+p = home + "/.zcode/cli/config.json"
+d = json.load(open(p))
+d.setdefault("plugins", {}).setdefault("enabledPlugins", {})[pid] = True
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=1)
+print("插件已注册并启用:", pid)
 PY
 
-echo "安装完成。重启 ZCode 桌面端后生效。"
-echo "立即验证推送: python3 \"$BASE/hooks/task_notify.py\" --test"
+echo "安装完成。重启 ZCode 桌面端后生效（必须重启，插件在启动时加载）。"
+echo "立即验证推送: python3 \"$SRC/task-notify/hooks/task_notify.py\" --test"

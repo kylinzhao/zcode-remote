@@ -19,15 +19,15 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.zcode.remote
-        MARKETING_VERSION: "1.1.0"
+        MARKETING_VERSION: "1.1.1"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
     info:
       path: ZCodeRemote/Info.plist
       properties:
         CFBundleDisplayName: ZCode Remote
-        CFBundleShortVersionString: "1.1.0"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "1.1.1"
+        CFBundleVersion: "4"
         UILaunchScreen: {}
         NSCameraUsageDescription: 需要相机权限才能扫描电脑端 ZCode 的远程访问二维码。
         UISupportedInterfaceOrientations:
