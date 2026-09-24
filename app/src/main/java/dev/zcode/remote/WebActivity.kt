@@ -88,6 +88,11 @@ class WebActivity : Activity() {
             hideError()
             instance?.let { binding.web.loadUrl(it.url) }
         }
+        // 下拉刷新：页面卡死时的就地恢复手段
+        binding.pull.setup(binding.web, binding.refreshSpinner) {
+            hideError()
+            binding.web.reload()
+        }
 
         configureWebView()
         applyInstanceState()
@@ -175,6 +180,7 @@ class WebActivity : Activity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                binding.pull.setRefreshing(false)
                 // 兜底：脚本内幂等，重复注入无害
                 view.evaluateJavascript(DetectorJs.source, null)
             }
@@ -198,6 +204,7 @@ class WebActivity : Activity() {
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                 // 安全策略：一律不放行证书错误
                 handler.cancel()
+                binding.pull.setRefreshing(false)
                 showError(getString(R.string.error_ssl))
             }
 
@@ -205,6 +212,7 @@ class WebActivity : Activity() {
                 view: WebView, request: WebResourceRequest, error: WebResourceError
             ) {
                 if (request.isForMainFrame) {
+                    binding.pull.setRefreshing(false)
                     showError(getString(R.string.error_network))
                 }
             }
@@ -213,6 +221,7 @@ class WebActivity : Activity() {
                 view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse
             ) {
                 if (request.isForMainFrame) {
+                    binding.pull.setRefreshing(false)
                     showError(getString(R.string.error_http, errorResponse.statusCode))
                 }
             }

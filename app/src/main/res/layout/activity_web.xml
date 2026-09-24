@@ -71,10 +71,29 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <WebView
-            android:id="@+id/web"
+        <dev.zcode.remote.PullRefreshLayout
+            android:id="@+id/pull"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:background="@color/window_bg">
+
+            <ProgressBar
+                android:id="@+id/refresh_spinner"
+                style="@android:style/Widget.Material.ProgressBar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="10dp"
+                android:indeterminate="false"
+                android:indeterminateTint="@color/brand_primary"
+                android:max="100"
+                android:progressTint="@color/brand_primary" />
+
+            <WebView
+                android:id="@+id/web"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </dev.zcode.remote.PullRefreshLayout>
 
         <LinearLayout
             android:id="@+id/error"

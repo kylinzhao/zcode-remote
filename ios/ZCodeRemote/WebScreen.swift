@@ -81,6 +81,11 @@ private struct WebViewContainer: View {
                         onError: { message in
                             errorText = message
                             loading = false
+                        },
+                        onPullRefresh: {
+                            // 下拉刷新走既有 reloadToken 通道，与菜单里的"刷新"同一条路
+                            errorText = nil
+                            reloadToken += 1
                         })
                 if let errorText {
                     errorView(errorText)
@@ -174,6 +179,7 @@ private struct WebView: UIViewRepresentable {
     let reloadToken: Int
     let onProgress: (Double) -> Void
     let onError: (String) -> Void
+    let onPullRefresh: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -194,6 +200,11 @@ private struct WebView: UIViewRepresentable {
         }
         view.allowsBackForwardNavigationGestures = true
         view.navigationDelegate = context.coordinator
+        // 下拉刷新：页面卡死时的就地恢复手段
+        let refresh = UIRefreshControl()
+        refresh.tintColor = .indigo
+        refresh.addTarget(context.coordinator, action: #selector(Coordinator.pullRefreshTriggered), for: .valueChanged)
+        view.scrollView.refreshControl = refresh
         context.coordinator.progressObservation = view.observe(\.estimatedProgress, options: [.new]) { obj, _ in
             let p = obj.estimatedProgress
             DispatchQueue.main.async { self.onProgress(p) }
@@ -217,6 +228,9 @@ private struct WebView: UIViewRepresentable {
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
         // 打断 message handler 对 coordinator 的强引用
         uiView.configuration.userContentController.removeAllScriptMessageHandlers()
+        // 下拉刷新随 WebView 一起拆掉
+        coordinator.cancelRefreshSafety()
+        uiView.scrollView.refreshControl = nil
     }
 
     @MainActor
@@ -225,9 +239,32 @@ private struct WebView: UIViewRepresentable {
         var progressObservation: NSKeyValueObservation?
         var lastReloadToken = 0
         weak var webView: WKWebView?
+        private var refreshSafetyWork: DispatchWorkItem?
 
         init(parent: WebView) {
             self.parent = parent
+        }
+
+        /// 下拉刷新触发
+        @objc func pullRefreshTriggered() {
+            parent.onPullRefresh()
+            cancelRefreshSafety()
+            // 页面卡死时 didFinish 永远不来，超时兜底收起指示器
+            let work = DispatchWorkItem { [weak self] in
+                self?.endPullRefresh()
+            }
+            refreshSafetyWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: work)
+        }
+
+        func endPullRefresh() {
+            cancelRefreshSafety()
+            webView?.scrollView.refreshControl?.endRefreshing()
+        }
+
+        func cancelRefreshSafety() {
+            refreshSafetyWork?.cancel()
+            refreshSafetyWork = nil
         }
 
         /// 检测脚本上报任务结束
@@ -259,10 +296,16 @@ private struct WebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation?,
                      withError error: Error) {
+            endPullRefresh()
             parent.onError(Self.friendly(error))
         }
 
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
+            endPullRefresh()
+        }
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation?, withError error: Error) {
+            endPullRefresh()
             parent.onError(Self.friendly(error))
         }
 
