@@ -204,7 +204,8 @@ private struct WebView: UIViewRepresentable {
         // 下拉刷新：页面卡死时的就地恢复手段。远程页的滚动都在内层容器里，
         // 触点命中可上滚容器时（zcodePullGate 探测）摘掉控件让手势归页面，防误刷新。
         let refresh = UIRefreshControl()
-        refresh.tintColor = .indigo
+        // UIColor 没有 .indigo（那是 SwiftUI Color 的成员），UIKit 对应色是 systemIndigo
+        refresh.tintColor = .systemIndigo
         refresh.addTarget(context.coordinator, action: #selector(Coordinator.pullRefreshTriggered), for: .valueChanged)
         view.scrollView.refreshControl = refresh
         context.coordinator.pullRefreshControl = refresh
