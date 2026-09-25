@@ -3,16 +3,22 @@ import UserNotifications
 import UIKit
 import SwiftUI
 
-/// 注入远程页（zcode.z.ai/remote）的任务结束检测脚本。
+/// 注入远程页（zcode.z.ai/remote）的脚本：任务结束检测 + 下拉刷新防误触探测。
 ///
-/// 原理：relay 传输是多层二进制协议，无法可靠解析；但任务流式执行时页面 WebSocket
-/// 的字节流量持续处于高位，结束后回落到只剩心跳（约 10s 一次、几十字节）。
+/// 任务结束检测原理：relay 传输是多层二进制协议，无法可靠解析；但任务流式执行时页面
+/// WebSocket 的字节流量持续处于高位，结束后回落到只剩心跳（约 10s 一次、几十字节）。
 /// 本脚本包一层 window.WebSocket 统计流量，「持续高位 → 回落且页面不可见」即判定
 /// 任务结束，postMessage 通知 native。对协议升级、界面改版免疫。
+///
+/// 下拉刷新探测：远程页是「外层不滚、聊天记录是内层滚动容器」的布局，UIRefreshControl
+/// 只看主 scrollView 位置，内层滚动一律被误判成下拉刷新。脚本在 touchstart 时探测
+/// 触点是否落在还能向上滚的内层容器里，经 zcodePullGate handler 告知 native，
+/// 命中则本次手势摘掉 refreshControl，滚动让给页面。
 ///
 /// 注意：Android 端 DetectorJs.kt 是同一份脚本的移植副本，改动需两处同步。
 enum TaskDetector {
     static let messageHandlerName = "zcodeTaskDone"
+    static let pullGateHandlerName = "zcodePullGate"
 
     static let source = """
         (function () {
@@ -20,6 +26,10 @@ enum TaskDetector {
           window.__zcTaskDetector = true;
           var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers['\(messageHandlerName)'];
           if (!bridge || typeof bridge.postMessage !== 'function') return 'no-bridge';
+          var pullBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers['\(pullGateHandlerName)'];
+          function notifyPullGate(blocked) {
+            if (pullBridge) { try { pullBridge.postMessage(blocked ? 1 : 0); } catch (e) {} }
+          }
           var OrigWS = window.WebSocket;
           if (!OrigWS) return 'no-ws';
 
@@ -99,6 +109,24 @@ enum TaskDetector {
           window.WebSocket = ZcWebSocket;
 
           setInterval(onTick, TICK_MS);
+
+          // —— 下拉刷新防误触探测（双端 BODY 同步块，勿单边改动）——
+          // 触点命中「还能向上滚」的内层容器（overflowY 可滚且 scrollTop>0）时，
+          // 本次手势是内容滚动而非下拉刷新，探测结果交给 native 决定是否放行。
+          document.addEventListener('touchstart', function (e) {
+            var t = e.touches[0];
+            if (!t) return;
+            var el = document.elementFromPoint(t.clientX, t.clientY);
+            var blocked = false;
+            for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+              var oy = getComputedStyle(n).overflowY;
+              if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && n.scrollTop > 0) {
+                blocked = true; break;
+              }
+            }
+            notifyPullGate(blocked);
+          }, { capture: true, passive: true });
+
           return 'ok';
         })();
         """

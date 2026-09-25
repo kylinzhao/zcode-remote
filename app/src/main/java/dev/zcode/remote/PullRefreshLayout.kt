@@ -3,6 +3,7 @@ package dev.zcode.remote
 import android.annotation.SuppressLint
 import android.animation.ValueAnimator
 import android.content.Context
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -19,7 +20,8 @@ import kotlin.math.abs
  *
  * XML 里放一个内容 View（WebView）和一个圆形 ProgressBar
  * （style=Widget.Material.ProgressBar，layout_gravity=top|center_horizontal），
- * 代码里 [setup] 绑定后即可用。内容滚到顶时下拉出现指示器，
+ * 代码里 [setup] 绑定后即可用。内容滚到顶、且触点不在可上滚的内层容器
+ * （由注入脚本 touchstart 探测、[onInnerScrollProbe] 回报）时下拉才出现指示器，
  * 松手超过阈值触发回调；加载方完成后调 [setRefreshing](false) 收起。
  */
 class PullRefreshLayout @JvmOverloads constructor(
@@ -47,6 +49,20 @@ class PullRefreshLayout @JvmOverloads constructor(
     private var settleAnimator: ValueAnimator? = null
     // 页面卡死时 onLoadFinished 永远不来，超时兜底收起指示器
     private val refreshTimeout = Runnable { finishRefresh() }
+
+    // —— 内层滚动探测（WebView 页面内滚动 vs 下拉刷新的手势仲裁）——
+    // 注入脚本在每次 touchstart 探测触点是否落在「还能向上滚」的内层容器并回调
+    // [onInnerScrollProbe]。结果按手势生效：只有回报时刻晚于本次按下（downUptime）
+    // 才作为拦截依据，更早的视为上一手势的过期残留。
+    private var probeBlocked = false
+    private var probeAtUptime = 0L
+    private var downUptime = 0L
+
+    /** 注入脚本回报：本次触摸是否命中可上滚的内层滚动容器（WebActivity 经 UI 线程转发）。 */
+    fun onInnerScrollProbe(blocked: Boolean) {
+        probeBlocked = blocked
+        probeAtUptime = SystemClock.uptimeMillis()
+    }
 
     fun setup(target: View, spinner: ProgressBar, onRefresh: () -> Unit) {
         this.target = target
@@ -88,6 +104,7 @@ class PullRefreshLayout @JvmOverloads constructor(
         downX = ev.x
         downY = ev.y
         lastY = ev.y
+        downUptime = SystemClock.uptimeMillis()
         dragging = false
         settleAnimator?.cancel()
     }
@@ -98,8 +115,9 @@ class PullRefreshLayout @JvmOverloads constructor(
         if (index < 0) return
         val dx = ev.getX(index) - downX
         val dy = ev.getY(index) - downY
-        // 竖直向下、且内容已在顶部时才接管手势
-        if (dy > touchSlop && dy > abs(dx) && !target.canScrollVertically(-1)) {
+        // 竖直向下、内容已在顶部、且触点不在可上滚的内层容器里，才接管手势
+        val innerScrolling = probeBlocked && probeAtUptime >= downUptime
+        if (dy > touchSlop && dy > abs(dx) && !target.canScrollVertically(-1) && !innerScrolling) {
             dragging = true
             lastY = ev.getY(index)
         }

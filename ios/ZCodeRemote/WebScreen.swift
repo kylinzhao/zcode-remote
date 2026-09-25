@@ -194,17 +194,20 @@ private struct WebView: UIViewRepresentable {
             WKUserScript(source: TaskDetector.source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
         config.userContentController.add(context.coordinator, name: TaskDetector.messageHandlerName)
+        config.userContentController.add(context.coordinator, name: TaskDetector.pullGateHandlerName)
         let view = WKWebView(frame: .zero, configuration: config)
         if desktop {
             view.customUserAgent = Urls.desktopUserAgent
         }
         view.allowsBackForwardNavigationGestures = true
         view.navigationDelegate = context.coordinator
-        // 下拉刷新：页面卡死时的就地恢复手段
+        // 下拉刷新：页面卡死时的就地恢复手段。远程页的滚动都在内层容器里，
+        // 触点命中可上滚容器时（zcodePullGate 探测）摘掉控件让手势归页面，防误刷新。
         let refresh = UIRefreshControl()
         refresh.tintColor = .indigo
         refresh.addTarget(context.coordinator, action: #selector(Coordinator.pullRefreshTriggered), for: .valueChanged)
         view.scrollView.refreshControl = refresh
+        context.coordinator.pullRefreshControl = refresh
         context.coordinator.progressObservation = view.observe(\.estimatedProgress, options: [.new]) { obj, _ in
             let p = obj.estimatedProgress
             DispatchQueue.main.async { self.onProgress(p) }
@@ -239,6 +242,7 @@ private struct WebView: UIViewRepresentable {
         var progressObservation: NSKeyValueObservation?
         var lastReloadToken = 0
         weak var webView: WKWebView?
+        var pullRefreshControl: UIRefreshControl?
         private var refreshSafetyWork: DispatchWorkItem?
 
         init(parent: WebView) {
@@ -267,11 +271,25 @@ private struct WebView: UIViewRepresentable {
             refreshSafetyWork = nil
         }
 
-        /// 检测脚本上报任务结束
+        /// 检测脚本上报
         func userContentController(_ userContentController: WKUserContentController,
                                    didReceive message: WKScriptMessage) {
-            guard message.name == TaskDetector.messageHandlerName else { return }
-            TaskDone.handleFinished(instanceID: parent.instance.id)
+            switch message.name {
+            case TaskDetector.messageHandlerName:
+                TaskDone.handleFinished(instanceID: parent.instance.id)
+            case TaskDetector.pullGateHandlerName:
+                // touchstart 探测：1 = 触点在可上滚的内层容器里，本次手势归页面滚动
+                pullGate(blocked: (message.body as? Int ?? 0) == 1)
+            default:
+                break
+            }
+        }
+
+        /// 命中内层滚动时摘掉 refreshControl（仅本次手势，下次 touchstart 重新决定）。
+        private func pullGate(blocked: Bool) {
+            guard let scrollView = webView?.scrollView, let control = pullRefreshControl else { return }
+            guard !control.isRefreshing else { return }
+            scrollView.refreshControl = blocked ? nil : control
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

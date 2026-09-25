@@ -238,7 +238,7 @@ class WebActivity : Activity() {
         }
     }
 
-    /** 供注入脚本回调：检测到任务结束且用户不在场。 */
+    /** 供注入脚本回调：任务结束提醒 + 下拉刷新防误触探测。 */
     private inner class TaskBridge {
         @JavascriptInterface
         fun onTaskFinished(payload: String) {
@@ -248,6 +248,12 @@ class WebActivity : Activity() {
                 InstanceStore.markDone(this@WebActivity, target.id)
                 Notifier.post(this@WebActivity, target.id, target.name)
             }
+        }
+
+        /** touchstart 探测：触点是否落在可上滚的内层滚动容器（见 DetectorJs / PullRefreshLayout）。 */
+        @JavascriptInterface
+        fun onPullGate(blocked: Boolean) {
+            runOnUiThread { binding.pull.onInnerScrollProbe(blocked) }
         }
     }
 
