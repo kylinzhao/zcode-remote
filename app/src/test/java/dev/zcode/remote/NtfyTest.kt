@@ -11,11 +11,20 @@ class NtfyTest {
     @Test
     fun parse_message_event() {
         val line = """
-            {"id":"uIdwd6oiZArv","time":1790134582,"expires":1790177782,"event":"message","topic":"zcode-abc123","title":"ZCode 任务已结束","message":"Mac 的任务执行完毕","tags":["white_check_mark"]}
+            {"id":"uIdwd6oiZArv","time":1790134582,"expires":1790177782,"event":"message","topic":"zcode-abc123","title":"MacBook-Pro · zcode-app","message":"完成:修复了推送插件注册三件套","tags":["white_check_mark"]}
         """.trimIndent()
         val e = Ntfy.parse(line)!!
         assertEquals("message", e.event)
         assertEquals("zcode-abc123", e.topic)
+        assertEquals("MacBook-Pro · zcode-app", e.title)
+        assertEquals("完成:修复了推送插件注册三件套", e.message)
+    }
+
+    @Test
+    fun parse_message_without_copy_falls_back_to_blank() {
+        val e = Ntfy.parse("""{"event":"message","topic":"zcode-abc123"}""")!!
+        assertEquals("", e.title)
+        assertEquals("", e.message)
     }
 
     @Test

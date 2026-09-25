@@ -10,11 +10,18 @@ import android.content.Intent
 /**
  * 任务结束提醒：一条通知 = 桌面图标红点（系统按通知渲染角标）+ 通知中心条目。
  * 每个实例一条，用实例 id 的 hash 作通知 id，用户打开该实例时撤下。
+ * ntfy 通道带推送文案（端·项目 + 任务摘要）时透传；注入检测通道没有内容，用本地默认文案。
  */
 object Notifier {
     private const val CHANNEL_ID = "task_done"
 
-    fun post(context: Context, instanceId: String, instanceName: String) {
+    fun post(
+        context: Context,
+        instanceId: String,
+        instanceName: String,
+        pushTitle: String? = null,
+        pushText: String? = null
+    ) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!manager.areNotificationsEnabled()) return
         manager.createNotificationChannel(
@@ -32,8 +39,11 @@ object Notifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = Notification.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.notif_title))
-            .setContentText(context.getString(R.string.notif_text, instanceName))
+            .setContentTitle(pushTitle?.takeIf { it.isNotBlank() } ?: context.getString(R.string.notif_title))
+            .setContentText(
+                pushText?.takeIf { it.isNotBlank() }
+                    ?: context.getString(R.string.notif_text, instanceName)
+            )
             .setSmallIcon(R.drawable.ic_computer)
             .setContentIntent(pi)
             .setAutoCancel(true)

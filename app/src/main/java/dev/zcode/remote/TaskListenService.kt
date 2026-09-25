@@ -119,7 +119,7 @@ class TaskListenService : Service() {
                         for (line in lines) {
                             if (!running) return
                             val event = Ntfy.parse(line) ?: continue
-                            if (event.event == "message") onTaskDone(instanceId)
+                            if (event.event == "message") onTaskDone(instanceId, event)
                             backoffMs = 2_000L
                         }
                     }
@@ -141,10 +141,11 @@ class TaskListenService : Service() {
         }
     }
 
-    private fun onTaskDone(instanceId: String) {
+    private fun onTaskDone(instanceId: String, event: Ntfy.Event) {
         InstanceStore.markDone(this, instanceId)
         val name = InstanceStore.load(this).firstOrNull { it.id == instanceId }?.name ?: return
-        Notifier.post(this, instanceId, name)
+        // 电脑端 hook 推来的文案（标题=端·项目，正文=任务摘要）直接透传显示
+        Notifier.post(this, instanceId, name, event.title, event.message)
     }
 
     companion object {
