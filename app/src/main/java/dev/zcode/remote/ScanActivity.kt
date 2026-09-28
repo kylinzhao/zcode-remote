@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Matrix
 import android.graphics.RectF
@@ -51,6 +52,10 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
     private val clearTop: Boolean
         get() = intent?.getBooleanExtra(EXTRA_CLEAR_TOP, false) ?: false
 
+    /** 编辑页「扫码重新绑定」传入的目标实例 id：扫到链接后回传给编辑页，不新建实例。 */
+    private val rebindId: String?
+        get() = intent?.getStringExtra(EXTRA_REBIND_ID)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
@@ -65,6 +70,10 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
         }
         binding.btnTorch.setOnClickListener { toggleTorch() }
         binding.btnGrant.setOnClickListener { requestCameraPermission() }
+        if (rebindId != null) {
+            // 编辑页本身就是粘贴兜底，这里再留一个「手动粘贴」入口会绕开重新绑定
+            binding.btnPaste.visibility = View.GONE
+        }
         binding.textureView.surfaceTextureListener = this
         if (binding.textureView.isAvailable) {
             // 表面早已就绪（权限弹窗等场景），手动触发一次
@@ -301,6 +310,11 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
         settled = true
         stopCamera()
 
+        if (rebindId != null) {
+            finishRebind(url)
+            return
+        }
+
         val existing = InstanceStore.load(this).firstOrNull { it.url == url }
         val instance = existing ?: run {
             val created = Instance(
@@ -320,6 +334,20 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
             Toast.LENGTH_SHORT
         ).show()
         startActivity(WebActivity.intent(this, instance.id, clearTop))
+        finish()
+    }
+
+    /** 重新绑定：把扫到的链接回传给编辑页替换网址；名称、提醒主题等设置不动。 */
+    private fun finishRebind(url: String) {
+        val conflict = InstanceStore.load(this).firstOrNull { it.url == url && it.id != rebindId }
+        if (conflict != null) {
+            // 扫到的是另一台电脑已绑定的链接：沿用添加流程的语义，直接打开那个实例
+            Toast.makeText(this, R.string.scan_exists, Toast.LENGTH_SHORT).show()
+            startActivity(WebActivity.intent(this, conflict.id, clearTop))
+            finish()
+            return
+        }
+        setResult(RESULT_OK, Intent().putExtra(EXTRA_OUT_URL, url))
         finish()
     }
 
@@ -346,5 +374,10 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
     companion object {
         private const val RC_CAMERA = 41
         const val EXTRA_CLEAR_TOP = "clearTop"
+        const val EXTRA_REBIND_ID = "rebindId"
+        const val EXTRA_OUT_URL = "url"
+
+        fun rebindIntent(context: Context, instanceId: String): Intent =
+            Intent(context, ScanActivity::class.java).putExtra(EXTRA_REBIND_ID, instanceId)
     }
 }

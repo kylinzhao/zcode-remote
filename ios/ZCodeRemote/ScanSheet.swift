@@ -51,7 +51,7 @@ struct ScanSheet: View {
             }
             .task {
                 if scannerAvailable {
-                    cameraGranted = await requestCamera()
+                    cameraGranted = await requestCameraAccess()
                 }
             }
         }
@@ -74,14 +74,6 @@ struct ScanSheet: View {
             }
         }
         .padding(.horizontal)
-    }
-
-    private func requestCamera() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized: return true
-        case .notDetermined: return await AVCaptureDevice.requestAccess(for: .video)
-        default: return false
-        }
     }
 
     private func handlePayload(_ raw: String) {
@@ -112,8 +104,17 @@ struct ScanSheet: View {
     }
 }
 
-/// DataScannerViewController 封装：仅识别二维码。
-private struct ScannerBox: UIViewControllerRepresentable {
+/// 相机权限：已授权返回 true；未决定则弹窗询问；被拒返回 false。扫码添加/重新绑定共用。
+func requestCameraAccess() async -> Bool {
+    switch AVCaptureDevice.authorizationStatus(for: .video) {
+    case .authorized: return true
+    case .notDetermined: return await AVCaptureDevice.requestAccess(for: .video)
+    default: return false
+    }
+}
+
+/// DataScannerViewController 封装：仅识别二维码，供扫码添加与扫码重新绑定共用。
+struct ScannerBox: UIViewControllerRepresentable {
     @Binding var granted: Bool
     let onPayload: (String) -> Void
 
@@ -144,7 +145,8 @@ private struct ScannerBox: UIViewControllerRepresentable {
     @MainActor
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
         var onPayload: (String) -> Void
-        private var fired = false
+        // 同一个码反复识别只回调一次；换了码（先扫错、再扫对）仍会回调——重新绑定场景需要继续扫
+        private var lastPayload: String?
 
         init(onPayload: @escaping (String) -> Void) {
             self.onPayload = onPayload
@@ -153,12 +155,11 @@ private struct ScannerBox: UIViewControllerRepresentable {
         func dataScanner(_ dataScanner: DataScannerViewController,
                          didAdd addedItems: [RecognizedItem],
                          allItems: [RecognizedItem]) {
-            guard !fired else { return }
             for item in addedItems {
                 if case .barcode(let barcode) = item,
                    let payload = barcode.payloadStringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !payload.isEmpty {
-                    fired = true
+                   !payload.isEmpty, payload != lastPayload {
+                    lastPayload = payload
                     onPayload(payload)
                     return
                 }

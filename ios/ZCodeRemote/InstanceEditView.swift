@@ -14,6 +14,8 @@ struct InstanceEditView: View {
     @State private var keepScreenOn = false
     @State private var desktopMode = false
     @State private var invalidTip: String?
+    @State private var showingRebindScan = false
+    @State private var scannedTip: String?
 
     init(existing: Instance?, suggestedURL: String? = nil, onSaved: ((Instance) -> Void)? = nil) {
         self.existing = existing
@@ -33,15 +35,29 @@ struct InstanceEditView: View {
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    if existing != nil {
+                        Button {
+                            showingRebindScan = true
+                        } label: {
+                            Label("扫码重新绑定", systemImage: "qrcode.viewfinder")
+                        }
+                    }
                     if let invalidTip {
                         Text(invalidTip)
                             .font(.footnote)
                             .foregroundStyle(.red)
                     }
+                    if let scannedTip {
+                        Text(scannedTip)
+                            .font(.footnote)
+                            .foregroundStyle(.green)
+                    }
                 } header: {
                     Text("实例")
                 } footer: {
-                    Text("粘贴电脑端 ZCode「远程访问」扫码得到的 https 网址。网址内含访问凭证，仅保存在本机应用沙盒，请勿外传。")
+                    Text(existing == nil
+                        ? "粘贴电脑端 ZCode「远程访问」扫码得到的 https 网址。网址内含访问凭证，仅保存在本机应用沙盒，请勿外传。"
+                        : "链接失效（电脑端重启/重新生成）时，点「扫码重新绑定」换新链接；名称、提醒设置保持不变。")
                 }
                 Section {
                     Toggle("打开时保持屏幕常亮", isOn: $keepScreenOn)
@@ -59,6 +75,13 @@ struct InstanceEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") { save() }
                         .fontWeight(.semibold)
+                }
+            }
+            .sheet(isPresented: $showingRebindScan) {
+                RebindScanSheet { url in
+                    urlText = url
+                    invalidTip = nil
+                    scannedTip = "已识别新链接，保存后生效"
                 }
             }
         }

@@ -37,6 +37,9 @@
     <string name="security_note">网址内含访问凭证，仅保存在本机应用私有目录，请勿外传。</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
+    <string name="btn_rebind_scan">扫码重新绑定</string>
+    <string name="rebind_helper">链接失效（电脑端重启/重新生成）时，扫电脑端新的「远程访问」二维码换链接；名称、提醒设置保持不变。</string>
+    <string name="rebind_done">已识别新链接，保存后生效</string>
 
     <string name="field_topic">任务结束提醒（ntfy 主题）</string>
     <string name="field_topic_hint">留空 = 不启用</string>

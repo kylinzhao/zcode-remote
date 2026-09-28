@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import dev.zcode.remote.databinding.ActivityEditBinding
 import java.util.UUID
@@ -34,6 +35,8 @@ class InstanceEditActivity : Activity() {
             binding.inputUrl.setText(existing.url)
             binding.switchKeepScreenOn.isChecked = existing.keepScreenOn
             binding.inputTopic.setText(existing.ntfyTopic.orEmpty())
+            binding.btnRebind.visibility = View.VISIBLE
+            binding.tvRebindHelper.visibility = View.VISIBLE
         } else {
             val url = intent.getStringExtra(EXTRA_URL)
             binding.inputUrl.setText(url)
@@ -46,10 +49,24 @@ class InstanceEditActivity : Activity() {
 
         binding.btnSave.setOnClickListener { save() }
         binding.btnCancel.setOnClickListener { finish() }
+        binding.btnRebind.setOnClickListener {
+            val id = editingId ?: return@setOnClickListener
+            startActivityForResult(ScanActivity.rebindIntent(this, id), RC_REBIND)
+        }
         binding.btnGenTopic.setOnClickListener {
             binding.inputTopic.setText(Ntfy.randomTopic())
         }
         binding.btnCopyInstall.setOnClickListener { copyInstallCommand() }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == RC_REBIND && resultCode == RESULT_OK) {
+            val url = data?.getStringExtra(ScanActivity.EXTRA_OUT_URL) ?: return
+            binding.inputUrl.setText(url)
+            Toast.makeText(this, R.string.rebind_done, Toast.LENGTH_LONG).show()
+        }
     }
 
     /** 复制电脑端一键安装命令（raw 模板把 __TOPIC__ 换成本实例的 topic）。 */
@@ -112,6 +129,7 @@ class InstanceEditActivity : Activity() {
         private const val EXTRA_ID = "id"
         private const val EXTRA_URL = "url"
         private const val EXTRA_NAME = "name"
+        private const val RC_REBIND = 42
         const val EXTRA_CLEAR_TOP = "clearTop"
 
         fun createIntent(context: Context, instanceId: String?, url: String?, name: String?): Intent =

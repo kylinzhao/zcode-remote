@@ -84,6 +84,25 @@
                 android:maxLines="3"
                 android:textColor="@color/on_surface_c" />
 
+            <Button
+                android:id="@+id/btn_rebind"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:text="@string/btn_rebind_scan"
+                android:textColor="@color/brand_primary"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tv_rebind_helper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rebind_helper"
+                android:textColor="@color/on_surface_variant_c"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <Switch
                 android:id="@+id/switch_keep_screen_on"
                 android:layout_width="match_parent"
