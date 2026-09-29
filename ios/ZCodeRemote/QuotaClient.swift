@@ -382,10 +382,10 @@ enum QuotaClient {
             return fmtTime(n > 1_000_000_000_000 ? n : n * 1000, "yyyy-MM-dd HH:mm")
         }
         if let n = v as? Int {
-            return fmtTime(n > 1_000_000_000_000 ? n : n * 1000, "yyyy-MM-dd HH:mm")
+            return fmtTime(n > 1_000_000_000_000 ? Int64(n) : Int64(n) * 1000, "yyyy-MM-dd HH:mm")
         }
         if let n = v as? Double {
-            return fmtTime(n > 1_000_000_000_000 ? n : n * 1000, "yyyy-MM-dd HH:mm")
+            return fmtTime(n > 1_000_000_000_000 ? Int64(n) : Int64(n * 1000), "yyyy-MM-dd HH:mm")
         }
         guard let raw = v as? String else { return nil }
         let t = raw.trimmingCharacters(in: .whitespaces)
@@ -426,7 +426,7 @@ enum QuotaClient {
 }
 
 private extension Array where Element == String {
-    var removingDuplicates: [String] {
+    func removingDuplicates() -> [String] {
         var seen = Set<String>()
         return filter { seen.insert($0).inserted }
     }
