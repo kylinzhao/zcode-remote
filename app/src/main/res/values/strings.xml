@@ -78,4 +78,6 @@
     <string name="notif_channel_desc">电脑端 ZCode 任务结束提醒</string>
     <string name="notif_title">ZCode 任务已结束</string>
     <string name="notif_text">「%1$s」的任务执行完毕，点击查看</string>
+    <string name="notif_title_interrupted">ZCode 任务异常中断</string>
+    <string name="notif_text_interrupted">「%1$s」执行中与电脑的连接断开，任务状态请打开确认</string>
 </resources>

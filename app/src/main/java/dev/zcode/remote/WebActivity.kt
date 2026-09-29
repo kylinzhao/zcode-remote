@@ -24,6 +24,7 @@ import android.webkit.WebViewClient
 import android.widget.PopupMenu
 import android.widget.Toast
 import dev.zcode.remote.databinding.ActivityWebBinding
+import org.json.JSONObject
 
 class WebActivity : Activity() {
 
@@ -244,9 +245,13 @@ class WebActivity : Activity() {
         fun onTaskFinished(payload: String) {
             val target = instance ?: return
             if (resumed) return // 双保险：页面认为不可见但本页其实在前台
+            // payload: {"watchedMs":N}=正常结束；{"interrupted":true}=执行中断连，任务状态未知
+            val interrupted = runCatching {
+                JSONObject(payload).optBoolean("interrupted")
+            }.getOrDefault(false)
             runOnUiThread {
                 InstanceStore.markDone(this@WebActivity, target.id)
-                Notifier.post(this@WebActivity, target.id, target.name)
+                Notifier.post(this@WebActivity, target.id, target.name, interrupted = interrupted)
             }
         }
 

@@ -11,6 +11,7 @@ import android.content.Intent
  * 任务结束提醒：一条通知 = 桌面图标红点（系统按通知渲染角标）+ 通知中心条目。
  * 每个实例一条，用实例 id 的 hash 作通知 id，用户打开该实例时撤下。
  * ntfy 通道带推送文案（端·项目 + 任务摘要）时透传；注入检测通道没有内容，用本地默认文案。
+ * interrupted=注入检测判定「执行中连接断开」，本地默认文案换成中断样式（无推送内容可透传）。
  */
 object Notifier {
     private const val CHANNEL_ID = "task_done"
@@ -20,7 +21,8 @@ object Notifier {
         instanceId: String,
         instanceName: String,
         pushTitle: String? = null,
-        pushText: String? = null
+        pushText: String? = null,
+        interrupted: Boolean = false
     ) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!manager.areNotificationsEnabled()) return
@@ -38,12 +40,16 @@ object Notifier {
             WebActivity.intent(context, instanceId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val notification = Notification.Builder(context, CHANNEL_ID)
-            .setContentTitle(pushTitle?.takeIf { it.isNotBlank() } ?: context.getString(R.string.notif_title))
-            .setContentText(
-                pushText?.takeIf { it.isNotBlank() }
-                    ?: context.getString(R.string.notif_text, instanceName)
+        val title = pushTitle?.takeIf { it.isNotBlank() }
+            ?: context.getString(if (interrupted) R.string.notif_title_interrupted else R.string.notif_title)
+        val text = pushText?.takeIf { it.isNotBlank() }
+            ?: context.getString(
+                if (interrupted) R.string.notif_text_interrupted else R.string.notif_text,
+                instanceName
             )
+        val notification = Notification.Builder(context, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_computer)
             .setContentIntent(pi)
             .setAutoCancel(true)

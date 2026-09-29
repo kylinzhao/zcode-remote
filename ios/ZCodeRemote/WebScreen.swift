@@ -277,7 +277,13 @@ private struct WebView: UIViewRepresentable {
                                    didReceive message: WKScriptMessage) {
             switch message.name {
             case TaskDetector.messageHandlerName:
-                TaskDone.handleFinished(instanceID: parent.instance.id)
+                // payload: {"watchedMs":N}=正常结束；{"interrupted":true}=执行中断连
+                var interrupted = false
+                if let data = (message.body as? String)?.data(using: .utf8),
+                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    interrupted = obj["interrupted"] as? Bool ?? false
+                }
+                TaskDone.handleFinished(instanceID: parent.instance.id, interrupted: interrupted)
             case TaskDetector.pullGateHandlerName:
                 // touchstart 探测：1 = 触点在可上滚的内层容器里，本次手势归页面滚动
                 pullGate(blocked: (message.body as? Int ?? 0) == 1)

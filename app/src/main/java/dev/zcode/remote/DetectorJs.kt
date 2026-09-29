@@ -7,6 +7,9 @@ package dev.zcode.remote
  * WebSocket 的字节流量持续处于高位，结束后回落到只剩心跳（约 10s 一次、几十字节）。
  * 本脚本包一层 window.WebSocket 统计流量，「持续高位 → 回落且页面不可见」即判定
  * 任务结束，通过 __ZcodeNative.onTaskFinished 通知 native。对协议升级、界面改版免疫。
+ * 异常中断：进入「有任务」后连接断开（3s 内无自动重连），上报 {interrupted:true}——
+ * 正常收尾不会有 close，执行中掉线即异常；native 据此发「任务中断」而非「已结束」。
+ * payload 区分：{watchedMs:N}=正常结束；{interrupted:true}=执行中断连，任务状态未知。
  *
  * 下拉刷新探测：远程页是「外层不滚、聊天记录是内层滚动容器」的布局，native 侧
  * 只能看到外层滚动位置，内层滚动一律被误判成下拉刷新。脚本在 touchstart 时探测
@@ -39,6 +42,7 @@ object DetectorJs {
           var HIGH_BYTES = 2048;     // 窗口内收到这么多字节视为「执行中」流量
           var ARM_MS = 15000;        // 高位需持续这么久才进入「有任务」状态（过滤翻历史等突发）
           var QUIET_MS = 6000;       // 「有任务」后需连续安静这么久才判定结束（过滤网络抖动）
+          var GRACE_MS = 3000;       // 断连后等这么久排除页面自动重连，再定性为异常中断
 
           var bytesInWindow = 0;
           var highSince = 0;         // 本次连续高位起点，0 = 当前不是高位
@@ -47,6 +51,8 @@ object DetectorJs {
           var quietSince = 0;        // 回落后的安静起点
           var resolved = false;      // 本轮任务是否已出结果（已通知或用户在场看到）
           var openSockets = 0;
+          var lastHighAt = 0;        // 最近一次高位窗口的时刻，断连时区分「执行中断」与「结束后断」
+          var interruptTimer = 0;
 
           function sizeOf(data) {
             if (typeof data === 'string') return data.length;
@@ -58,6 +64,7 @@ object DetectorJs {
           function reset() {
             armed = false; resolved = false;
             highSince = 0; armedAt = 0; quietSince = 0;
+            if (interruptTimer) { clearTimeout(interruptTimer); interruptTimer = 0; }
           }
 
           function onTick() {
@@ -66,6 +73,7 @@ object DetectorJs {
             bytesInWindow = 0;
             if (high) {
               quietSince = 0;
+              lastHighAt = now;
               if (!highSince) {
                 highSince = now;
                 if (resolved) { armed = false; resolved = false; } // 安静后流量再起 = 新一轮任务
@@ -93,10 +101,32 @@ object DetectorJs {
 
           function ZcWebSocket(url, protocols) {
             var ws = protocols === undefined ? new OrigWS(url) : new OrigWS(url, protocols);
-            ws.addEventListener('open', function () { openSockets += 1; });
+            ws.addEventListener('open', function () {
+              openSockets += 1;
+              if (interruptTimer) { clearTimeout(interruptTimer); interruptTimer = 0; } // 自动重连成功，不算中断
+            });
             ws.addEventListener('close', function () {
               openSockets = Math.max(0, openSockets - 1);
-              if (openSockets === 0) reset();
+              if (openSockets > 0) return;
+              if (armed && !resolved && !interruptTimer) {
+                // 执行中连接断开：正常收尾不会有 close。等一小段排除自动重连，
+                // 仍无连接则定性——最近还有高位流量=执行中断，安静已久=结束但没赶上判定
+                interruptTimer = setTimeout(function () {
+                  interruptTimer = 0;
+                  if (!armed || resolved || openSockets > 0) return;
+                  var interrupted = Date.now() - lastHighAt < QUIET_MS;
+                  resolved = true;
+                  if (document.hidden) {
+                    try {
+                      bridge.onTaskFinished(JSON.stringify(
+                        interrupted ? { interrupted: true } : { watchedMs: Date.now() - armedAt }));
+                    } catch (e) { /* bridge 不可用即放弃 */ }
+                  }
+                  reset();
+                }, GRACE_MS);
+              } else {
+                reset();
+              }
             });
             ws.addEventListener('error', function () {});
             ws.addEventListener('message', function (ev) { bytesInWindow += sizeOf(ev.data); });

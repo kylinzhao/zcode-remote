@@ -65,7 +65,8 @@
 - 打开实例时可开启「保持屏幕常亮」（盯长时间任务时有用）
 - **任务结束提醒（双通道）**：任务跑完时，列表里对应实例点亮小红点，并发一条系统通知
   （桌面图标角标即来自通知）；打开该实例即消化。通道一「页面检测」零配置开箱即用；
-  通道二「ntfy 推送」锁屏/进程被杀也能收到，见下文「任务结束提醒」
+  通道二「ntfy 推送」锁屏/进程被杀也能收到，见下文「任务结束提醒」。
+  失败/中断不静默：任务失败的推送带 ❌ 标记；执行中连接断开单独发「任务异常中断」提醒
 - 深色模式跟随系统；加载进度条；断网/证书异常时显示中文错误页并可一键重试
 
 ## 任务结束提醒
@@ -77,6 +78,10 @@ WebSocket 的**流量形态**——任务流式执行时收包字节持续高位
 一次）——「持续高位 → 回落」即判定任务结束。不解析 ZCode 中继协议本身，远程页升级大概率
 不影响检测；判定完成时若你不在该页面（页面不可见），才点亮红点并提醒，正在盯着看则不打扰。
 
+**异常中断**：任务执行中若与电脑的连接断开（3 秒内没有自动重连），且你不在页面上，
+会单独发一条「任务异常中断」提醒——正常收尾不会有断连，执行中掉线即异常（电脑关机、
+网络切换、中继重启等）；任务最终是成是败，打开页面确认。
+
 边界：检测依赖 App 进程存活、页面 WebView 存活。Android 上切到后台一般仍有效（进程被系统
 杀死后失效）；iOS 上退到后台 WebView 会暂停脚本，回前台后恢复检测。
 
@@ -84,6 +89,9 @@ WebSocket 的**流量形态**——任务流式执行时收包字节持续高位
 
 电脑端装一个 task-notify 插件（Stop hook，任务结束时推 ntfy.sh），手机端 App 内嵌订阅。
 推送文案 =「电脑名 · 项目名」+ 任务内容摘要（任务收尾回复的首行，截 100 字）。
+失败识别：摘要开头命中失败特征（「任务/构建/测试…失败」「无法完成」「Error:」等）时，
+标签换 ❌、正文加 ❌ 前缀，兜底文案「任务执行失败」。识别是启发式的，宁漏勿误报；
+安装后可用 `--test-fail` 预览失败样式推送。
 
 1. 编辑实例 → 点「生成」得到私有 topic（ntfy 的安全模型：不知道 topic 名就收不到）；
 2. 电脑端安装（二选一）：
@@ -96,7 +104,7 @@ WebSocket 的**流量形态**——任务流式执行时收包字节持续高位
      步骤：
      1. 获取安装脚本：git clone --depth 1 https://github.com/kylinzhao/zcode-remote /tmp/zcode-remote（目录已存在则 git -C /tmp/zcode-remote pull）；git 不可用时改为下载 https://raw.githubusercontent.com/kylinzhao/zcode-remote/main/desktop-hook/install.sh 保存为 /tmp/install.sh。
      2. 运行安装：bash /tmp/zcode-remote/desktop-hook/install.sh <topic>（用 /tmp/install.sh 时相应替换路径）。topic 在我手机的 ZCode Remote「编辑实例 → 任务结束提醒」里生成，格式为字母/数字/-/_ 组成；如果我没有提供，先向我要，不要自己编造。
-     3. 验证：安装脚本会打印验证命令。运行 python3 ~/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify/0.1.0/hooks/task_notify.py --test 发送测试推送，再用 curl -sS "https://ntfy.sh/<topic>/json?poll=1" 确认能查到这条消息（查不到就等 60 秒重试一次：hook 有 60 秒限流）。
+     3. 验证：安装脚本会打印验证命令。运行 python3 ~/.zcode/cli/plugins/cache/dev-task-notify-local/task-notify/hooks/task_notify.py --test 发送测试推送，再用 curl -sS "https://ntfy.sh/<topic>/json?poll=1" 确认能查到这条消息（查不到就等 60 秒重试一次：hook 有 60 秒限流）。
      4. 完成后明确告诉我「重启 ZCode 桌面端后生效」。除本插件相关文件外，不要改动 ~/.zcode 下的任何其他文件。
      ```
    - **手动**：点「复制电脑端安装命令」，到**这台电脑**的终端粘贴运行（脚本幂等，重复运行无害）；
