@@ -10,32 +10,41 @@
         android:layout_height="56dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp">
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/btn_back"
+            android:src="@drawable/ic_back" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/app_name"
+            android:text="@string/quota_title"
             android:textColor="@color/on_surface_c"
             android:textSize="20sp"
             android:textStyle="bold" />
 
         <ImageButton
-            android:id="@+id/btn_quota"
+            android:id="@+id/btn_refresh_all"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginEnd="4dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/quota_title"
-            android:src="@drawable/ic_quota" />
+            android:contentDescription="@string/quota_refresh_all"
+            android:src="@drawable/ic_refresh" />
 
         <ImageButton
             android:id="@+id/btn_add"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/bg_circle_brand"
-            android:contentDescription="@string/fab_add"
+            android:contentDescription="@string/quota_add"
             android:src="@drawable/ic_add" />
     </LinearLayout>
 
@@ -71,13 +80,13 @@
                 android:layout_height="72dp"
                 android:alpha="0.5"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_computer" />
+                android:src="@drawable/ic_quota" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/empty_title"
+                android:text="@string/quota_empty_title"
                 android:textColor="@color/on_surface_c"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -87,19 +96,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="@string/empty_subtitle"
+                android:text="@string/quota_empty_subtitle"
                 android:textColor="@color/on_surface_variant_c"
                 android:textSize="14sp" />
-
-            <Button
-                android:id="@+id/btn_add_empty"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:background="@drawable/bg_btn_primary"
-                android:minWidth="160dp"
-                android:text="@string/btn_add"
-                android:textColor="@android:color/white" />
         </LinearLayout>
     </FrameLayout>
 </LinearLayout>

@@ -56,6 +56,17 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".QuotaActivity"
+            android:exported="false"
+            android:label="@string/quota_title" />
+
+        <activity
+            android:name=".AccountEditActivity"
+            android:exported="false"
+            android:label="@string/quota_add_manual"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".WebActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:exported="false"

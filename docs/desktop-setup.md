@@ -77,3 +77,25 @@ EOF
 - **公司网络封了 ntfy.sh？** 该通道不可用，但基础功能（走 `zcode.z.ai` 中继）不受影响；
   页面检测通道照常工作。
 - **iOS？** 推送通道未实现（APNs 需付费开发者账号），iPhone 上只有页面检测通道。
+
+## 可选：手机上看各账号额度
+
+App 的「账号额度」页直接调智谱官方接口查额度，**不经过电脑**——唯一要做的就是把
+各账号的查询凭据（coding-plan API Key，长期有效）弄到手机上。电脑端运行：
+
+```bash
+python3 scripts/quota-qr.py     # 依赖：pip3 install --user cryptography
+```
+
+脚本会：
+
+1. 读取 zcode-switch 账号库 `~/.zcode-switch/accounts/*.json`（没装 zsv 则用当前登录的
+   `~/.zcode/v2/credentials.json` 兜底），本地解密 `enc:v1` 凭据，抽出每个账号的
+   coding-plan Key（没有 Key 的账号用 JWT 兜底）；
+2. 顺带读 `~/.zcode-switch/quota-extra.json`，企业席位账号自动带上组织/项目 ID；
+3. 生成二维码页面并在浏览器打开 —— 手机 App →「账号额度」→「＋」扫码导入。
+
+无法扫码时页面底部有 JSON 文本可复制，到 App 扫码页「手动粘贴」导入。
+
+注意：二维码与 JSON 里是明文凭据，等于账号额度查询权（查不到你的对话内容），
+用完关闭页面即可；不要截图外发。

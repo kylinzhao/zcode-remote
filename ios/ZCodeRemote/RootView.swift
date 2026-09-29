@@ -25,6 +25,7 @@ struct RootView: View {
     @ObservedObject private var store = InstanceStore.shared
     @StateObject private var router = Router()
     @State private var showingScan = false
+    @State private var showingQuota = false
     @State private var editing: Instance?
     @State private var didAutoOpen = false
     private let autoOpenURL: String?
@@ -45,6 +46,14 @@ struct RootView: View {
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("ZCode Remote")
             .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Button {
+                        showingQuota = true
+                    } label: {
+                        Image(systemName: "chart.bar")
+                    }
+                    .accessibilityLabel("账号额度")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showingScan = true
@@ -53,6 +62,9 @@ struct RootView: View {
                     }
                     .accessibilityLabel("添加实例")
                 }
+            }
+            .navigationDestination(isPresented: $showingQuota) {
+                QuotaView()
             }
             .navigationDestination(for: UUID.self) { id in
                 WebScreen(instanceID: id)

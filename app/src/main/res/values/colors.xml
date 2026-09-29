@@ -8,4 +8,6 @@
     <color name="status_bar">#F6F7F9</color>
     <color name="card_stroke">#E4E6EB</color>
     <color name="launcher_bg">#161616</color>
+    <color name="warn_c">#E8930C</color>
+    <color name="danger_c">#D93838</color>
 </resources>

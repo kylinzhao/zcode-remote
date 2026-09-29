@@ -35,6 +35,7 @@ class MainActivity : Activity() {
 
         binding.btnAdd.setOnClickListener { startActivity(Intent(this, ScanActivity::class.java)) }
         binding.btnAddEmpty.setOnClickListener { startActivity(Intent(this, ScanActivity::class.java)) }
+        binding.btnQuota.setOnClickListener { startActivity(QuotaActivity.intent(this)) }
 
         reload()
         if (savedInstanceState == null) {

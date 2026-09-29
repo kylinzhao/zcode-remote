@@ -56,13 +56,25 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
     private val rebindId: String?
         get() = intent?.getStringExtra(EXTRA_REBIND_ID)
 
+    /** 额度页进入的「扫码导入账号」模式：载荷是账号 JSON 而不是远程链接。 */
+    private val accountMode: Boolean
+        get() = intent?.getBooleanExtra(EXTRA_MODE_ACCOUNT, false) ?: false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         binding.btnBack.setOnClickListener { finish() }
+        if (accountMode) {
+            binding.tvHint.setText(R.string.scan_hint_accounts)
+        }
         binding.btnPaste.setOnClickListener {
+            if (accountMode) {
+                startActivity(AccountEditActivity.createIntent(this, null))
+                finish()
+                return@setOnClickListener
+            }
             val edit = InstanceEditActivity.createIntent(this, instanceId = null, url = null, name = null)
             if (clearTop) edit.putExtra(InstanceEditActivity.EXTRA_CLEAR_TOP, true)
             startActivity(edit)
@@ -301,6 +313,10 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
 
     private fun onDecoded(text: String) {
         if (settled) return
+        if (accountMode) {
+            handleAccountPayload(text)
+            return
+        }
         val url = ScanDecoder.extractRemoteUrl(text)?.let { Urls.sanitize(it) }
         if (url == null) {
             // 非远程链接：提示载荷前缀，继续扫
@@ -334,6 +350,22 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
             Toast.LENGTH_SHORT
         ).show()
         startActivity(WebActivity.intent(this, instance.id, clearTop))
+        finish()
+    }
+
+    /** 账号导入：识别账号 JSON → 同名去重合并 → 回额度页。识别失败提示并继续扫。 */
+    private fun handleAccountPayload(text: String) {
+        val incoming = QuotaImport.parse(text)
+        if (incoming == null) {
+            Toast.makeText(this, getString(R.string.scan_invalid_account, text.take(24)), Toast.LENGTH_LONG).show()
+            return
+        }
+        settled = true
+        stopCamera()
+        val list = QuotaAccountStore.load(this)
+        val (added, updated) = QuotaImport.merge(list, incoming)
+        QuotaAccountStore.save(this, list)
+        Toast.makeText(this, getString(R.string.scan_accounts_imported, added, updated), Toast.LENGTH_LONG).show()
         finish()
     }
 
@@ -376,8 +408,12 @@ class ScanActivity : Activity(), TextureView.SurfaceTextureListener {
         const val EXTRA_CLEAR_TOP = "clearTop"
         const val EXTRA_REBIND_ID = "rebindId"
         const val EXTRA_OUT_URL = "url"
+        const val EXTRA_MODE_ACCOUNT = "modeAccount"
 
         fun rebindIntent(context: Context, instanceId: String): Intent =
             Intent(context, ScanActivity::class.java).putExtra(EXTRA_REBIND_ID, instanceId)
+
+        fun accountIntent(context: Context): Intent =
+            Intent(context, ScanActivity::class.java).putExtra(EXTRA_MODE_ACCOUNT, true)
     }
 }
