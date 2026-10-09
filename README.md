@@ -1,10 +1,12 @@
-# ZCode Remote — Android & iOS 客户端
+# ZCode Remote — Android / iOS / macOS 客户端
 
-一个可直接安装的移动客户端：内嵌 WebView 打开电脑端 ZCode 的「远程访问」页面，
+一个可直接安装的客户端：内嵌 WebView 打开电脑端 ZCode 的「远程访问」页面，
 并支持管理多个实例 —— 家里电脑、公司电脑各一个，一键切换。
 
 - **Android**：见下文「安装」「从源码构建」，APK 在 Release 页直接下载；
-- **iOS / iPadOS**：见文末「iOS 版」，应用内扫码 + 多实例，iPad 以桌面形态（PC 形式）加载。
+- **iOS / iPadOS**：见文末「iOS 版」，应用内扫码 + 多实例，iPad 以桌面形态（PC 形式）加载；
+- **macOS**：见文末「macOS 版」，在公司 Mac 上遥控家里电脑的 ZCode——纯 swiftc 构建，
+  无需 Xcode，无需开发者账号。
 
 **工作原理**：ZCode 桌面端（v3.14+）内置「远程访问」，会生成一个经 `zcode.z.ai` 云中继的
 扫码网址（`https://zcode.z.ai/remote/v4?sid=…&hash=…&mid=…&name=…`）。手机打开该网址
@@ -141,7 +143,8 @@ WebSocket 的**流量形态**——任务流式执行时收包字节持续高位
 介意对话内容过公网的话见 desktop-setup.md 隐私条目（可退回纯「任务执行完毕」文案）；
 hook 默认 60s 限流，过滤交互式连续短回复。
 插件源码在 `desktop-hook/`。电脑端的完整设置/卸载/常见问题见
-[docs/desktop-setup.md](docs/desktop-setup.md)。iOS 未实现推送通道（APNs 需付费开发者账号），仅支持通道一。
+[docs/desktop-setup.md](docs/desktop-setup.md)。iOS 未实现推送通道（APNs 需付费开发者账号），仅支持通道一；
+macOS 版同样仅通道一（系统通知 + Dock 角标，见文末「macOS 版」）。
 
 ## 安全设计
 
@@ -218,3 +221,55 @@ open ZCodeRemote.xcodeproj
 
 > **行为提示**：只绑定了一个电脑时，打开 App 会直接进入该页面；页面右上角菜单第一项
 > 即「添加新实例」，添加后自动切换过去；左上返回随时回到实例列表。
+
+## macOS 版（在公司 Mac 上遥控家里电脑的 ZCode）
+
+公司发的电脑是 Mac、又想在大屏上盯家里电脑跑的任务时，在公司 Mac 上装 ZCode Remote，
+直接遥控家里电脑的 ZCode。与 iOS 版功能对齐：多实例管理、冷启动直达上次实例、
+任务结束提醒（含异常中断）、账号额度；并针对桌面形态做了适配。
+
+### 构建（无需 Xcode，有 Command Line Tools 即可）
+
+```bash
+bash mac/build-mac.sh        # 编译 mac/Sources/ 全部 .swift → 组装 .app → ad-hoc 签名
+# 产物：mac/build/ZCodeRemote.app
+open mac/build/ZCodeRemote.app
+```
+
+- 最低系统 macOS 14.0；依赖仅 Command Line Tools（`swiftc` / `codesign`），
+  不需要完整 Xcode，也没有 .xcodeproj / xcodegen——所有源码编译为单一目标；
+- **ad-hoc 签名本地分发**：不申请 Developer ID、不做公证。本机构建本机 `open` 直跑；
+  把 `.app` 拷给别的 Mac 时若被 Gatekeeper 拦下，到「系统设置 → 隐私与安全性」
+  点「仍要打开」放行；
+- 仓库 CI（`mac-build` workflow）在 `mac/` 代码变更时自动构建，并把
+  `ZCodeRemote.app` 打成 zip 上传（Artifacts），下载解压即可用。
+
+### 添加实例（无相机扫码，粘贴 / 二维码截图导入）
+
+1. 在**电脑端 ZCode** 打开「远程访问」，屏幕上出现绑定二维码；
+2. Mac 上打开 ZCode Remote，点右上角「＋」，两种导入方式：
+   - **粘贴链接**：把远程链接 `https://zcode.z.ai/remote/…`（电脑端复制，或手机扫过
+     再转发给自己）粘进输入框；
+   - **识别二维码截图**：对着电脑屏幕拍不了照没关系——把二维码截图
+     （`⇧⌘4` 框选存文件，或 `⇧⌃⌘4` 直接截进剪贴板），在「或识别二维码截图」区
+     **⌘V 粘贴 / 拖入图片 / 选择图片…**，App 用 CoreImage 解出链接后自动保存；
+3. 识别成功后自动按电脑名命名实例并打开；同一链接重复导入不会产生重复实例；
+4. 链接失效（电脑端重启/重新生成）时：右键实例 → 编辑 → **换链接**
+   （同样支持粘贴链接与二维码截图），名称、提醒设置原样保留。
+
+### 与 iOS 版的功能差异
+
+| 能力 | iOS | macOS |
+| --- | --- | --- |
+| 添加实例 / 换链接 | 相机扫码（VisionKit）+ 粘贴兜底 | **无相机扫码**：粘贴链接 + 二维码截图解码（CoreImage） |
+| 网页形态 | 每实例「以桌面版网页加载」开关，iPad 默认桌面 | **恒桌面形态**（无条件桌面 UA，无开关） |
+| 任务结束提醒 | 通道一 + 系统通知 / 桌面角标 | 通道一 + 系统通知 / **Dock 角标**（未读实例数） |
+| ntfy 推送（通道二） | 未实现（APNs 需付费开发者账号） | 未实现（仅通道一，同 iOS） |
+| 屏幕常亮开关 | 有（打开实例时可开启） | 无（Mac 通常接电源，休眠交给系统设置） |
+| 下拉刷新 | 有（UIRefreshControl + 防误触） | 无（页面菜单「刷新」） |
+| 构建 / 分发 | 需 Xcode + xcodegen，免费签名 7 天有效 | **纯 swiftc + ad-hoc 签名**，CLT 即可，本地分发 |
+
+其余与 iOS 版一致：仅接受 `https://`、证书校验失败一律阻止加载；实例与账号数据存本机
+`~/Library/Application Support/ZCodeRemote/` 下 JSON；账号额度页（主页工具栏「📊」）
+支持相机扫码（有摄像头时）、粘贴 JSON、二维码截图导入与手动填 Key，
+查询同样由本机直连智谱官方接口、不需要家里电脑在线。

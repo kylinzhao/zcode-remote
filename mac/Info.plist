@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>dev.zcode.remote.mac</string>
+	<key>CFBundleExecutable</key>
+	<string>ZCodeRemote</string>
+	<key>CFBundleName</key>
+	<string>ZCode Remote</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<!-- 相机仅用于扫码（实例绑定二维码 + 额度凭据二维码）；macOS 10.14+ 缺此 key 访问相机会被系统直接终止 -->
+	<key>NSCameraUsageDescription</key>
+	<string>用于扫描电脑端 ZCode「远程访问」二维码与账号额度凭据二维码。</string>
+</dict>
+</plist>

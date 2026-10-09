@@ -28,6 +28,7 @@
 - [T11 单实例直达与页面内添加](tickets/T11-single-instance-autopen.md) — 仅一个实例时进 App 直开；页面菜单「添加新实例」clearTop/replaceTop 保证返回栈 列表→页面
 - [T12 页面状态保持与冷启动直达](tickets/T12-page-state-restore.md) — 冷启动按 lastOpenedAt 直达上次实例；热唤起（ROM 清栈）按 LastPage 标记恢复退出前页面；savedInstanceState 区分系统重建
 - [T13 账号额度](tickets/T13-quota.md) — 手机直连智谱接口查多账号额度（coding-plan key 双域名回退 + JWT 兜底）；桌面 quota-qr.py 导出二维码扫码导入；原生额度页双端落地，模拟器实测通过
+- [T14 macOS 版](tickets/T14-mac-version.md) — 公司 Mac 遥控家里 ZCode：纯 swiftc 零 Xcode 构建 + ad-hoc 本地分发；无相机扫码改粘贴 + 二维码截图解码（CoreImage）；UserNotifications 任务提醒 + Dock 角标；恒桌面形态
 
 ## Not yet specified
 

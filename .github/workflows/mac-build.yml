@@ -1,0 +1,28 @@
+name: mac-build
+
+on:
+  push:
+    paths:
+      - 'mac/**'
+      - '.github/workflows/mac-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (纯 swiftc，无需 Xcode)
+        run: bash mac/build-mac.sh
+
+      - name: Zip app bundle
+        run: |
+          cd mac/build
+          zip -r -y ZCodeRemote-mac.zip ZCodeRemote.app
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ZCodeRemote-mac
+          path: mac/build/ZCodeRemote-mac.zip
