@@ -18,6 +18,10 @@
 	<string>14.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<!-- 相机仅用于扫码（实例绑定二维码 + 额度凭据二维码）；macOS 10.14+ 缺此 key 访问相机会被系统直接终止 -->

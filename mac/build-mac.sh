@@ -32,6 +32,10 @@ swiftc -swift-version 5 -o "$MACOS_DIR/ZCodeRemote" "${sources[@]}"
 echo "→ 复制 Info.plist"
 cp "$MAC_DIR/Info.plist" "$CONTENTS_DIR/Info.plist"
 
+echo "→ 安装图标"
+mkdir -p "$CONTENTS_DIR/Resources"
+cp "$MAC_DIR/Resources/AppIcon.icns" "$CONTENTS_DIR/Resources/AppIcon.icns"
+
 echo "→ ad-hoc 签名"
 codesign --force --sign - "$APP_DIR"
 
