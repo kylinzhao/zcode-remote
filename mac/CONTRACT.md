@@ -34,6 +34,7 @@ struct Instance: Codable, Identifiable, Equatable, Hashable {
     var createdAt: Date
     var lastOpenedAt: Date?
     var unreadDone: Bool?
+    var ntfyTopic: String?       // 通道二（ntfy 推送）私有主题，nil=未启用；字段名与 Android 对齐（JSON 互通）
 }
 
 final class InstanceStore: ObservableObject {
@@ -80,14 +81,20 @@ struct WebScreen: View {
 @MainActor
 enum TaskDone {
     static var pageVisible: Bool                  // 远程页是否在窗口层级（WebScreen onAppear/onDisappear）
+    static var visibleInstanceID: UUID?           // 处于窗口层级的远程页是哪个实例（与 pageVisible 同源维护）
     static var appActive: Bool                    // App 是否前台（入口 scenePhase == .active）
     static var userWatching: Bool { get }         // pageVisible && appActive
     static func requestAuthorization() -> Void
     static func handleFinished(instanceID: UUID, interrupted: Bool = false) -> Void
+    static func handlePush(instanceID: UUID, title: String, body: String) -> Void
     static func clear(for instanceID: UUID) -> Void
     static func syncBadge() -> Void               // Dock 角标 = 未读实例数
 }
 ```
+
+通道二（ntfy 推送）的订阅侧归 Push 模块（见 §②）：`PushListener.shared.start()` 由 App 入口
+调用一次，长连接收到 message 事件后回调 `TaskDone.handlePush`（透传 hook 文案；用户正盯着
+该实例页面时不重复打扰）。
 
 `TaskDetector`（注入脚本与 handler 常量 `messageHandlerName` / `pullGateHandlerName` / `source`）
 是 Web 模块内部实现，非跨模块 API——但注意第 ③ 节：脚本里的下拉刷新探测段在 mac 上无消费者，
@@ -167,6 +174,7 @@ invalid redeclaration，且只在合编时爆）。UI 模块的 ScannerBox 就�
 | 模块 | 目录 | 可创建/修改 | 禁止 |
 | --- | --- | --- | --- |
 | Web（Web 工程师） | `mac/Sources/Web/` | WebScreen、WebView 封装（NSViewRepresentable）、TaskDetector、TaskDone | 其他任何目录 |
+| 推送（Push，v1.8.0 增设） | `mac/Sources/Push/` | Ntfy（流事件解析/topic 工具）、PushListener（ntfy 长连接订阅）、InstallScript（电脑端安装命令模板） | 其他任何目录；实例红点/通知一律经 `TaskDone.handlePush`，不得自行碰 UserNotifications |
 | 界面（UI 工程师） | `mac/Sources/UI/` | App 入口（@main）、RootView、Router、InstanceEditView、AddInstanceSheet、RebindSheet，以及**共享扫码封装 `ScannerBox` + `requestCameraAccess()`（§① 列出的签名，供 Quota 复用）**等 | 其他任何目录；**例外：必须删除 `mac/Sources/Core/PlaceholderMain.swift`**（自带真正 @main 入口时，两个 @main 无法共存。这是 UI 模块唯一允许触碰 Core 的动作，仅限删除该文件） |
 | 额度（Quota 工程师） | `mac/Sources/Quota/` | QuotaView、QuotaClient、QuotaModels、QuotaScanSheet 等 | 其他任何目录；**不得重名定义 `ScannerBox` / `requestCameraAccess`（归 UI 模块，见 §①）** |
 | Core（基础移植工程师） | `mac/Sources/Core/` | Models.swift 等 | — |

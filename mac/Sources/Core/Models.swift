@@ -1,7 +1,8 @@
 import Foundation
 
 /// 电脑实例模型（与 Android/iOS 版数据结构对齐，JSON 互通）。
-/// mac 端差异仅一处：恒以桌面形态加载，`desktopMode` 字段只为兼容既有 JSON 保留（见 CONTRACT.md ⑤）。
+/// mac 端差异：恒以桌面形态加载（`desktopMode` 字段仅为兼容既有 JSON 保留，见 CONTRACT.md ⑤）；
+/// 另有 `ntfyTopic`（通道二推送主题，iOS 版暂无此字段）。
 struct Instance: Codable, Identifiable, Equatable, Hashable {
     var id: UUID
     var name: String
@@ -13,6 +14,9 @@ struct Instance: Codable, Identifiable, Equatable, Hashable {
     var lastOpenedAt: Date?
     /// 任务结束且用户不在场的未读提醒；nil = 无。Optional 保证旧 JSON 文件可解码。
     var unreadDone: Bool?
+    /// 通道二（ntfy 推送）的私有主题；nil = 未启用。字段名与 Android 版一致（JSON 互通，
+    /// iOS 版无此字段但解码忽略未知键）。Optional 保证旧 JSON 文件可解码。
+    var ntfyTopic: String?
 }
 
 /// 实例本地存储：Application Support 下 JSON 文件。

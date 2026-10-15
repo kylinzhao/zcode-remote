@@ -122,10 +122,12 @@ private struct WebViewContainer: View {
             store.markOpened(instance.id)
             // 用户正在看这台电脑：标记可见并消化已有的红点与提醒（mac 无屏幕常亮开关，keepScreenOn 忽略）
             TaskDone.pageVisible = true
+            TaskDone.visibleInstanceID = instance.id
             TaskDone.clear(for: instance.id)
         }
         .onDisappear {
             TaskDone.pageVisible = false
+            TaskDone.visibleInstanceID = nil
         }
     }
 

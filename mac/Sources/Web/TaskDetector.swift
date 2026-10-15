@@ -161,10 +161,14 @@ enum TaskDetector {
 /// 任务结束提醒的 native 侧（mac）：可见性判定、Dock 角标与本地通知。
 /// UserNotifications 在 macOS 同样可用；红点数据走 InstanceStore.unreadDone（列表 UI 由界面模块消费）。
 /// appActive 由 App 入口按 scenePhase 维护、回前台时调 syncBadge（iOS ZCodeRemoteApp.swift 同构，mac 归界面模块）。
+/// 通道二（ntfy 推送）到达也走这里：PushListener 解析后调 handlePush，通知相关逻辑仍收敛在本类型。
 @MainActor
 enum TaskDone {
     /// 远程页面容器是否在窗口层级里（WebScreen 出现/消失维护）。
     static var pageVisible = false
+    /// 当前处于窗口层级的远程页是哪个实例（与 pageVisible 同源维护）。
+    /// 通道二推送到达时用于判断「用户是否正盯着这台电脑」——别对正在看的人弹提醒。
+    static var visibleInstanceID: UUID?
     /// App 是否在前台（App 入口 scenePhase 维护）。
     static var appActive = true
 
@@ -183,6 +187,25 @@ enum TaskDone {
         store.markDone(instanceID)
         syncBadge()
         postNotification(instanceID: instanceID, interrupted: interrupted)
+    }
+
+    /// 通道二（ntfy 推送）到达。电脑端 hook 已带文案（标题=主机·项目、正文=摘要，失败带 ❌），直接
+    /// 透传显示（Android Notifier 同构）。与 Android 的差异一处：用户正盯着这台电脑的页面时不重复
+    /// 打扰——沿用通道一「在场视为亲眼看到」的策略；空文案兜底本地默认文案。
+    static func handlePush(instanceID: UUID, title: String, body: String) {
+        guard let instance = InstanceStore.shared.instance(instanceID) else { return }
+        if userWatching, visibleInstanceID == instanceID { return }
+        InstanceStore.shared.markDone(instanceID)
+        syncBadge()
+        let content = UNMutableNotificationContent()
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let b = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        content.title = t.isEmpty ? "ZCode 任务已结束" : t
+        content.body = b.isEmpty ? "「\(instance.name)」的任务执行完毕，打开查看" : b
+        content.sound = .default
+        // 与通道一共用实例 id 作标识：打开实例时一并撤下，两通道不会叠两条
+        let request = UNNotificationRequest(identifier: instanceID.uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     /// 用户打开该实例：消化红点与提醒。

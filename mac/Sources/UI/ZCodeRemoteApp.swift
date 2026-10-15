@@ -21,7 +21,11 @@ struct ZCodeRemoteApp: App {
                         TaskDone.syncBadge()
                     }
                 }
-                .task { TaskDone.requestAuthorization() }
+                .task {
+                    TaskDone.requestAuthorization()
+                    // 通道二（ntfy 推送）：进程常驻即订阅，此后跟随实例表自动增删连接
+                    PushListener.shared.start()
+                }
         }
     }
 }
